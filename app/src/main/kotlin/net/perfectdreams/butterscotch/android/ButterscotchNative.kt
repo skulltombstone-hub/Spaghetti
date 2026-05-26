@@ -56,17 +56,18 @@ object ButterscotchNative {
     /**
      * Audio update + `Runner_step` + draw sequence. Returns false when the runner has asked to
      * exit. The caller is responsible for `eglSwapBuffers` after this returns (see
-     * [ButterscotchEgl.swapBuffers]).
+     * [ButterscotchEgl.swapBuffers]) and for pacing the loop (see [getTargetFrameHz]).
      *
-     * [winW]/[winH] are the current EGL window surface dimensions.
+     * [winW]/[winH] are the current EGL window surface dimensions. [audioDtSeconds] is the time
+     * since the previous frame in seconds — used to advance the audio system.
      */
-    external fun stepAndDraw(winW: Int, winH: Int): Boolean
+    external fun stepAndDraw(winW: Int, winH: Int, audioDtSeconds: Float): Boolean
 
     /**
-     * Reset the internal frame-pacing clock to "now", so the game does not try to catch up after
-     * being backgrounded. Call right after binding a fresh EGL surface.
+     * The current room's tick rate in Hz (GM:S `room_speed`). Returns 0 if no room is active yet.
+     * The render loop uses this to decide how long to sleep between frames.
      */
-    external fun resetFrameClock()
+    external fun getTargetFrameHz(): Int
 
     /** Tear down runner/renderer/audio. */
     external fun stopRunner()

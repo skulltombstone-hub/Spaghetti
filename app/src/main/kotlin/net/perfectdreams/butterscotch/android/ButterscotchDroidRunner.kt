@@ -46,8 +46,6 @@ class ButterscotchDroidRunner(val dataWinPath: String, val savesPath: String) {
                     return@launch
                 }
 
-                ButterscotchNative.resetFrameClock()
-
                 if (!runnerStarted) {
                     // We only start the runner here because we NEED to have an EGL context, because the GLRenderer needs it on glInit
                     Log.i(TAG, "Starting runner...")
@@ -55,20 +53,39 @@ class ButterscotchDroidRunner(val dataWinPath: String, val savesPath: String) {
                     runnerStarted = true
                 }
 
+                var lastFrameNs = System.nanoTime()
+
                 // Don't worry about the egl.hasSurface check, if the surface dies, the finally block will be executed and (hopefully) a new surface will be created,
                 // starting a whole new render loop :3
                 while (isActive && egl.hasSurface) {
-                    Log.i(TAG, "Tick!")
+                    val frameStartNs = System.nanoTime()
+                    val audioDt = ((frameStartNs - lastFrameNs) / 1_000_000_000.0)
+                        .coerceIn(0.0, 0.1)
+                        .toFloat()
 
                     ButterscotchNative.beginFrame()
                     drainPendingInput()
-                    val keepRunning = ButterscotchNative.stepAndDraw(egl.width, egl.height)
+                    val keepRunning = ButterscotchNative.stepAndDraw(egl.width, egl.height, audioDt)
                     egl.swapBuffers()
-
-                    Log.i(TAG, "Ran one frame! Keep running? $keepRunning")
 
                     if (!keepRunning)
                         break // Game requested exit
+
+                    val hz = ButterscotchNative.getTargetFrameHz()
+                    if (hz > 0) {
+                        val targetNs = 1_000_000_000L / hz
+                        val nextDeadline = lastFrameNs + targetNs
+                        val remaining = nextDeadline - System.nanoTime()
+                        if (remaining > 2_000_000L) {
+                            Thread.sleep((remaining - 1_000_000L) / 1_000_000L)
+                        }
+                        while (System.nanoTime() < nextDeadline) {
+                            // spin spin spin!
+                        }
+                        lastFrameNs = nextDeadline
+                    } else {
+                        lastFrameNs = System.nanoTime()
+                    }
 
                     // Yield so other tasks (like our clean up task) can be executed
                     // The reason for that is because we don't have any suspension points here on the loop, because Butterscotch sleeps the thread
