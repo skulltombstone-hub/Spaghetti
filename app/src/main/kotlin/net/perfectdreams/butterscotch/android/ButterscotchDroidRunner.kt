@@ -13,7 +13,6 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
 import java.util.concurrent.Executors
-import kotlin.plus
 
 // The Butterscotch Android API is actually "global bound", but we use a class to help managing things here (and will be useful if we refactor down the road)
 class ButterscotchDroidRunner(val dataWinPath: String, val savesPath: String) {
@@ -25,6 +24,7 @@ class ButterscotchDroidRunner(val dataWinPath: String, val savesPath: String) {
         private val glScope = CoroutineScope(glDispatcher + SupervisorJob())
     }
 
+    private val egl = ButterscotchEGL()
     private var renderJob: Job? = null
     private var runnerStarted = false
     private var started = false
@@ -38,7 +38,12 @@ class ButterscotchDroidRunner(val dataWinPath: String, val savesPath: String) {
             try {
                 Log.i(TAG, "Binding surface to window...")
 
-                ButterscotchNative.bindWindow(surface)
+                if (!egl.bindWindow(surface)) {
+                    Log.e(TAG, "Failed to bind EGL surface! Aborting render loop...")
+                    return@launch
+                }
+
+                ButterscotchNative.resetFrameClock()
 
                 if (!runnerStarted) {
                     // We only start the runner here because we NEED to have an EGL context, because the GLRenderer needs it on glInit
@@ -47,10 +52,13 @@ class ButterscotchDroidRunner(val dataWinPath: String, val savesPath: String) {
                     runnerStarted = true
                 }
 
-                while (isActive) {
+                // Don't worry about the egl.hasSurface check, if the surface dies, the finally block will be executed and (hopefully) a new surface will be created,
+                // starting a whole new render loop :3
+                while (isActive && egl.hasSurface) {
                     Log.i(TAG, "Tick!")
 
-                    val keepRunning = ButterscotchNative.runOneFrame()
+                    val keepRunning = ButterscotchNative.runOneFrame(egl.width, egl.height)
+                    egl.swapBuffers()
 
                     Log.i(TAG, "Ran one frame! Keep running? $keepRunning")
 
@@ -63,7 +71,7 @@ class ButterscotchDroidRunner(val dataWinPath: String, val savesPath: String) {
                     yield()
                 }
             } finally {
-                ButterscotchNative.unbindWindow()
+                egl.unbindWindow()
             }
         }
     }
@@ -87,7 +95,7 @@ class ButterscotchDroidRunner(val dataWinPath: String, val savesPath: String) {
                 renderJob?.cancelAndJoin()
 
                 ButterscotchNative.stopRunner()
-                ButterscotchNative.teardownEgl()
+                egl.teardown()
                 ButterscotchNative.markExited()
 
                 renderJob = null

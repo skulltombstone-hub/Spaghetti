@@ -1,6 +1,5 @@
 package net.perfectdreams.butterscotch.android
 
-import android.view.Surface
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -8,14 +7,14 @@ import androidx.compose.ui.unit.IntSize
 
 /**
  * Flat JNI surface — direct mirror of [src/web/main.c]'s shape. Each function does one thing and
- * returns; the loop, the lifecycle, and the dedicated render thread live in [ButterscotchDroidRunner] on the
- * JVM side.
+ * returns; the loop, the lifecycle, the dedicated render thread, and EGL all live in
+ * [ButterscotchDroidRunner] on the JVM side.
  *
- * Threading contract: every render-side function ([bindWindow], [unbindWindow], [startRunner],
- * [runOneFrame], [stopRunner], [teardownEgl]) MUST be called from the same OS thread, because
- * `eglMakeCurrent` binds the EGL context to the calling thread. [ButterscotchDroidRunner] is the only thing
- * that should call these. The exception is [onKey], which is safe to call from any thread (its
- * events are queued under a mutex on the C side and drained inside `runOneFrame`).
+ * Threading contract: every render-side function ([startRunner], [runOneFrame], [stopRunner])
+ * MUST be called from the same OS thread that owns the EGL context (the one [ButterscotchEGL]
+ * was bound on). [ButterscotchDroidRunner] is the only thing that should call these. The exception
+ * is [onKey], which is safe to call from any thread (its events are queued under a mutex on the C
+ * side and drained inside `runOneFrame`).
  *
  * Native -> Kotlin push notifications ([onTitleChanged], [onGameSizeChanged]) come in via
  * @JvmStatic methods that the C side invokes through cached jmethodIDs. They fire from the render
@@ -29,25 +28,27 @@ object ButterscotchNative {
 
     external fun init()
 
-    // ===[ Render-side JNI — all must run on RenderLoop's thread ]===
+    // ===[ Render-side JNI — all must run on the EGL-owning thread ]===
 
-    /** Bind a [Surface] to the EGL context (creates the context lazily on first call). */
-    external fun bindWindow(surface: Surface): Boolean
-
-    /** Destroy the EGL window surface. The context survives so GL state persists. */
-    external fun unbindWindow()
-
-    /** Parse data.win, build VM/renderer/audio, fire first room. Requires a bound surface. */
+    /** Parse data.win, build VM/renderer/audio, fire first room. Requires a current EGL context. */
     external fun startRunner(dataWinPath: String, savesPath: String): Boolean
 
-    /** Run one game tick + render + swap. Returns false when the runner has asked to exit. */
-    external fun runOneFrame(): Boolean
+    /**
+     * Run one game tick + render. Returns false when the runner has asked to exit. The caller is
+     * responsible for `eglSwapBuffers` after this returns (see [ButterscotchEGL.swapBuffers]).
+     *
+     * [winW]/[winH] are the current EGL window surface dimensions.
+     */
+    external fun runOneFrame(winW: Int, winH: Int): Boolean
 
-    /** Tear down runner/renderer/audio. EGL context still alive. */
+    /**
+     * Reset the internal frame-pacing clock to "now", so the game does not try to catch up after
+     * being backgrounded. Call right after binding a fresh EGL surface.
+     */
+    external fun resetFrameClock()
+
+    /** Tear down runner/renderer/audio. */
     external fun stopRunner()
-
-    /** Destroy EGL context + display. Call last, after [stopRunner]. */
-    external fun teardownEgl()
 
     // ===[ Thread-safe JNI ]===
 
