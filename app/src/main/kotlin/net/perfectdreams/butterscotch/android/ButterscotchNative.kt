@@ -4,17 +4,21 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.IntSize
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.channels.Channel
 
 /**
  * Flat JNI surface — direct mirror of [src/web/main.c]'s shape. Each function does one thing and
- * returns; the loop, the lifecycle, the dedicated render thread, and EGL all live in
- * [ButterscotchDroidRunner] on the JVM side.
+ * returns; the loop, the lifecycle, EGL, frame pacing, and the input queue all live in
+ * [ButterscotchDroidRunner] / this object on the JVM side.
  *
- * Threading contract: every render-side function ([startRunner], [runOneFrame], [stopRunner])
- * MUST be called from the same OS thread that owns the EGL context (the one [ButterscotchEGL]
- * was bound on). [ButterscotchDroidRunner] is the only thing that should call these. The exception
- * is [onKey], which is safe to call from any thread (its events are queued under a mutex on the C
- * side and drained inside `runOneFrame`).
+ * Threading contract: the render-side externals ([startRunner], [beginFrame], [onKeyDown],
+ * [onKeyUp], [stepAndDraw], [stopRunner]) MUST be called from the same OS thread that owns the
+ * EGL context (the one [ButterscotchEgl] was bound on). [ButterscotchDroidRunner] is the only
+ * thing that should call these.
+ *
+ * The exception is [onKey], which is safe to call from any thread — it does no JNI work itself,
+ * just pushes into a [Channel] that the render thread drains on each frame.
  *
  * Native -> Kotlin push notifications ([onTitleChanged], [onGameSizeChanged]) come in via
  * @JvmStatic methods that the C side invokes through cached jmethodIDs. They fire from the render
@@ -34,12 +38,29 @@ object ButterscotchNative {
     external fun startRunner(dataWinPath: String, savesPath: String): Boolean
 
     /**
-     * Run one game tick + render. Returns false when the runner has asked to exit. The caller is
-     * responsible for `eglSwapBuffers` after this returns (see [ButterscotchEGL.swapBuffers]).
+     * Clear the runner's "key pressed this frame" state. Must be called at the top of each frame,
+     * before draining input via [drainPendingInput], so the GameMaker `keyboard_check_pressed`
+     * flag is computed correctly.
+     */
+    external fun beginFrame()
+
+    /**
+     * Forward a key-down to the runner directly (no queue). Render thread only — call between
+     * [beginFrame] and [stepAndDraw]. Use [onKey] if you're not on the render thread.
+     */
+    external fun onKeyDown(keyCode: Int)
+
+    /** Forward a key-up to the runner directly. See [onKeyDown] for threading rules. */
+    external fun onKeyUp(keyCode: Int)
+
+    /**
+     * Audio update + `Runner_step` + draw sequence. Returns false when the runner has asked to
+     * exit. The caller is responsible for `eglSwapBuffers` after this returns (see
+     * [ButterscotchEgl.swapBuffers]).
      *
      * [winW]/[winH] are the current EGL window surface dimensions.
      */
-    external fun runOneFrame(winW: Int, winH: Int): Boolean
+    external fun stepAndDraw(winW: Int, winH: Int): Boolean
 
     /**
      * Reset the internal frame-pacing clock to "now", so the game does not try to catch up after
@@ -49,11 +70,6 @@ object ButterscotchNative {
 
     /** Tear down runner/renderer/audio. */
     external fun stopRunner()
-
-    // ===[ Thread-safe JNI ]===
-
-    /** Forward a keyboard event (GameMaker vk_* code). Safe from any thread. */
-    external fun onKey(keyCode: Int, isDown: Boolean)
 
     // ===[ Native -> Kotlin push state ]===
 

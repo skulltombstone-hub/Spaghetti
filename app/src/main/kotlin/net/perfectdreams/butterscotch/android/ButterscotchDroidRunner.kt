@@ -7,6 +7,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -28,6 +30,7 @@ class ButterscotchDroidRunner(val dataWinPath: String, val savesPath: String) {
     private var renderJob: Job? = null
     private var runnerStarted = false
     private var started = false
+    private val inputChannel = Channel<InputEvent>(capacity = 256, onBufferOverflow = BufferOverflow.DROP_OLDEST,)
 
     fun startRenderLoop(surface: Surface) {
         require(renderJob == null) { "Trying to start a renderJob while one is already active! Bug?" }
@@ -57,7 +60,9 @@ class ButterscotchDroidRunner(val dataWinPath: String, val savesPath: String) {
                 while (isActive && egl.hasSurface) {
                     Log.i(TAG, "Tick!")
 
-                    val keepRunning = ButterscotchNative.runOneFrame(egl.width, egl.height)
+                    ButterscotchNative.beginFrame()
+                    drainPendingInput()
+                    val keepRunning = ButterscotchNative.stepAndDraw(egl.width, egl.height)
                     egl.swapBuffers()
 
                     Log.i(TAG, "Ran one frame! Keep running? $keepRunning")
@@ -101,6 +106,36 @@ class ButterscotchDroidRunner(val dataWinPath: String, val savesPath: String) {
                 renderJob = null
                 started = false
                 runnerStarted = false
+            }
+        }
+    }
+
+    sealed interface InputEvent {
+        data class Key(val code: Int, val isDown: Boolean) : InputEvent
+    }
+
+    /**
+     * Queue a key event for the runner.
+     *
+     * Safe to use from the UI thread because this only queues the input.
+     */
+    fun onKey(keyCode: Int, isDown: Boolean) {
+        inputChannel.trySend(InputEvent.Key(keyCode, isDown))
+    }
+
+    /**
+     * Drains all queued inputs and forwards it to the runner.
+     *
+     * Should ONLY be called from the render thread!
+     */
+    fun drainPendingInput() {
+        while (true) {
+            val event = inputChannel.tryReceive().getOrNull() ?: break
+            when (event) {
+                is InputEvent.Key -> if (event.isDown)
+                    ButterscotchNative.onKeyDown(event.code)
+                else
+                    ButterscotchNative.onKeyUp(event.code)
             }
         }
     }

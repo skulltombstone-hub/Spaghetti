@@ -70,24 +70,24 @@ private const val KEY_Z     = 90
  * fingers both landing on the joystick area mapped to "up"): the key stays down until *all*
  * pointers release it. Matches what the WebKT reference frontend does with pressedRefs.
  */
-class VirtualKeyState {
+class VirtualKeyState(val runner: ButterscotchDroidRunner) {
     private val refs = HashMap<Int, Int>()
 
-    @Synchronized
+    // We do NOT need to use @Synchronized here because the is only one UI Thread, and we only dispatch it to a channel
+
     fun acquire(keyCode: Int) {
         val newCount = (refs[keyCode] ?: 0) + 1
         refs[keyCode] = newCount
         if (newCount == 1) {
-            ButterscotchNative.onKey(keyCode, isDown = true)
+            runner.onKey(keyCode, isDown = true)
         }
     }
 
-    @Synchronized
     fun release(keyCode: Int) {
         val newCount = (refs[keyCode] ?: return) - 1
         if (newCount <= 0) {
             refs.remove(keyCode)
-            ButterscotchNative.onKey(keyCode, isDown = false)
+            runner.onKey(keyCode, isDown = false)
         } else {
             refs[keyCode] = newCount
         }
@@ -100,9 +100,9 @@ class VirtualKeyState {
         for (k in newKeys) if (k !in oldKeys) acquire(k)
     }
 
-    @Synchronized
     fun releaseAll() {
-        for ((k, _) in refs) ButterscotchNative.onKey(k, isDown = false)
+        for ((k, _) in refs)
+            runner.onKey(k, isDown = false)
         refs.clear()
     }
 }

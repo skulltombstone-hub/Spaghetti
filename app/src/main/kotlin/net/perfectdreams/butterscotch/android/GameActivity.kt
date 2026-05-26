@@ -79,7 +79,7 @@ class GameActivity : ComponentActivity() {
             // changes that reflow the gamepad's Composable tree. If it lived inside GameControls
             // and Compose discarded that subtree across an orientation flip, held keys could "leak"
             // into the runner with no Composable left to release them.
-            val keys = remember { VirtualKeyState() }
+            val keys = remember { VirtualKeyState(butterscotchRunner) }
 
             // Auto-finish when the native runner reports it has exited (game quit, fatal error).
             val hasExited = ButterscotchNative.hasExited

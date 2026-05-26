@@ -76,7 +76,7 @@ class ButterscotchEGL {
 
     /**
      * Create an EGL window surface for [androidSurface] and make the context current on the calling thread.
-     * 
+     *
      * From here on, all render-side native calls must come from this thread.
      */
     fun bindWindow(androidSurface: Surface): Boolean {
