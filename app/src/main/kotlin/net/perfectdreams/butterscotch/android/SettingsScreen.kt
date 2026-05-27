@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
@@ -57,15 +58,26 @@ fun SettingsScreen(
             ButterscotchTopBar(entry.title, nav, navigationIcon = { ButterscotchBackButton(nav) })
         }
     ) { innerPadding ->
-        Column(Modifier
-            .fillMaxSize()
-            .padding(innerPadding)) {
-            SettingsRow(
-                title = "Delete",
-                subtitle = "Removes the game and all its saves",
-                titleColor = MaterialTheme.colorScheme.error,
-                onClick = { showDeleteDialog = true },
-            )
+        // LazyColumn instead of a plain Column so additional settings rows added later
+        // remain scrollable on short viewports without retrofitting the container.
+        LazyColumn(
+            Modifier.fillMaxSize().padding(innerPadding),
+        ) {
+            item("manage-slots") {
+                SettingsRow(
+                    title = "Save Slots",
+                    subtitle = "${entry.saveSlots.size} slot${if (entry.saveSlots.size == 1) "" else "s"} · active: ${entry.saveSlots.first { it.active }.fancyName}",
+                    onClick = { nav.navigate(Route.SaveSlotList(gameId)) },
+                )
+            }
+            item("delete") {
+                SettingsRow(
+                    title = "Delete",
+                    subtitle = "Removes the game and all its saves",
+                    titleColor = MaterialTheme.colorScheme.error,
+                    onClick = { showDeleteDialog = true },
+                )
+            }
         }
     }
 
@@ -78,7 +90,7 @@ fun SettingsScreen(
                 TextButton(onClick = {
                     showDeleteDialog = false
                     nav.popBackStack()
-                    library.remove(gameId)
+                    library.remove(entry.id)
                 }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {

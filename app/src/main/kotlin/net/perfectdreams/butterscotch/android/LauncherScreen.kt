@@ -119,17 +119,17 @@ fun LauncherScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 // The entries are already sorted here
-                items(entries, key = { it.id }) { entry ->
+                items(entries, key = { it.id.toString() }) { entry ->
                     GameTile(
                         library = library,
                         entry = entry,
                         onLaunch = {
                             context.startActivity(Intent(context, GameActivity::class.java).apply {
-                                putExtra(GameActivity.EXTRA_GAME_ID, entry.id)
+                                putExtra(GameActivity.EXTRA_GAME_ID, entry.id.toString())
                             })
                         },
                         onOpenSettings = {
-                            nav.navigate(Route.GameSettings(entry.id))
+                            nav.navigate(Route.GameSettings(entry.id.toString()))
                         },
                     )
                 }

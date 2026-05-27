@@ -47,5 +47,22 @@ fun ButterscotchApp() {
                 nav = nav
             )
         }
+        composable<Route.SaveSlotList> { backStackEntry ->
+            val args = backStackEntry.toRoute<Route.SaveSlotList>()
+            SaveSlotListScreen(
+                library = library,
+                gameId = args.gameId,
+                nav = nav,
+            )
+        }
+        composable<Route.SaveSlotDetail> { backStackEntry ->
+            val args = backStackEntry.toRoute<Route.SaveSlotDetail>()
+            SaveSlotDetailScreen(
+                library = library,
+                gameId = args.gameId,
+                slotId = args.slotId,
+                nav = nav,
+            )
+        }
     }
 }
