@@ -6,6 +6,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -17,16 +18,9 @@ import androidx.navigation.NavHostController
 fun ButterscotchTopBar(
     title: String,
     nav: NavHostController,
-    hasBackButton: Boolean
+    navigationIcon: @Composable (() -> Unit) = {},
+    actions: @Composable RowScope.() -> Unit = {},
 ) {
-    val navigationIcon = @Composable {
-        if (hasBackButton) {
-            IconButton(onClick = { nav.popBackStack() }) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.Black)
-            }
-        }
-    }
-
     TopAppBar(
         title = { Text(title) },
         colors = TopAppBarDefaults.topAppBarColors(
@@ -34,5 +28,6 @@ fun ButterscotchTopBar(
             titleContentColor = Color.Black
         ),
         navigationIcon = navigationIcon,
+        actions = actions,
     )
 }

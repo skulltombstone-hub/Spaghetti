@@ -38,7 +38,14 @@ class GameLibrary private constructor(
     val entries: SnapshotStateList<GameEntry> = mutableStateListOf<GameEntry>().apply { addAll(initial) }
 
     fun bundleDir(entry: GameEntry): File = File(gameDir(entry.id), "bundle")
-    fun savesDir(entry: GameEntry): File = File(gameDir(entry.id), "saves")
+    fun savesDir(entry: GameEntry): File {
+        val saveSlots = entry.saveSlots
+        // We should NEVER have multiple active slots or a game without any game slots!
+        val saveSlot = saveSlots.first { it.active }
+
+        return File(gameDir(entry.id), "saves/${saveSlot.id}")
+    }
+
     fun wadPath(entry: GameEntry): File = File(
         bundleDir(entry),
         when (entry.gameType) {
@@ -71,7 +78,14 @@ class GameLibrary private constructor(
             title = title,
             gameType = gameType,
             importedAtMillis = System.currentTimeMillis(),
-            favorited = false
+            favorited = false,
+            saveSlots = listOf(
+                GameEntry.SaveSlot(
+                    true,
+                    "Save Slot",
+                    UUID.randomUUID().toString()
+                )
+            )
         )
         entries.add(entry)
         save()

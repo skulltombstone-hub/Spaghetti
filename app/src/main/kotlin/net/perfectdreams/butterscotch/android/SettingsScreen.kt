@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import net.perfectdreams.butterscotch.android.components.ButterscotchBackButton
 import net.perfectdreams.butterscotch.android.components.ButterscotchTopBar
 import net.perfectdreams.butterscotch.android.library.GameLibrary
 
@@ -53,7 +54,7 @@ fun SettingsScreen(
 
     Scaffold(
         topBar = {
-            ButterscotchTopBar(entry.title, nav, true)
+            ButterscotchTopBar(entry.title, nav, navigationIcon = { ButterscotchBackButton(nav) })
         }
     ) { innerPadding ->
         Column(Modifier

@@ -2,14 +2,18 @@ package net.perfectdreams.butterscotch.android.library
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import net.perfectdreams.butterscotch.android.UUIDAsStringSerializer
+import java.util.UUID
 
 @Serializable
 data class GameEntry(
-    val id: String,
+    @Serializable(with = UUIDAsStringSerializer::class)
+    val id: UUID,
     val title: String,
     val gameType: GameType,
     val importedAtMillis: Long,
-    val favorited: Boolean
+    val favorited: Boolean,
+    val saveSlots: List<SaveSlot>
 ) {
     @Serializable
     sealed class GameType {
@@ -22,4 +26,12 @@ data class GameEntry(
 
         // We keep it like this for when we decide to add new GameMaker versions :3
     }
+
+    @Serializable
+    data class SaveSlot(
+        @Serializable(with = UUIDAsStringSerializer::class)
+        val id: UUID,
+        val active: Boolean,
+        val fancyName: String,
+    )
 }

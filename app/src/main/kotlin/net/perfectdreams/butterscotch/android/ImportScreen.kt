@@ -32,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import kotlinx.coroutines.launch
+import net.perfectdreams.butterscotch.android.components.ButterscotchBackButton
 import net.perfectdreams.butterscotch.android.components.ButterscotchTopBar
 import net.perfectdreams.butterscotch.android.library.GameEntry.GameType
 import net.perfectdreams.butterscotch.android.library.GameLibrary
@@ -80,7 +81,7 @@ fun ImportScreen(
 
     Scaffold(
         topBar = {
-            ButterscotchTopBar("Add Game", nav, true)
+            ButterscotchTopBar("Add Game", nav, navigationIcon = { ButterscotchBackButton(nav) })
         },
     ) { innerPadding ->
         Box(Modifier.fillMaxSize().padding(innerPadding).padding(24.dp)) {

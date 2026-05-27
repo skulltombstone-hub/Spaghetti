@@ -10,5 +10,6 @@ import kotlinx.serialization.Serializable
 sealed interface Route {
     @Serializable data object Launcher : Route
     @Serializable data object ImportGame : Route
+    @Serializable data object About : Route
     @Serializable data class GameSettings(val gameId: String) : Route
 }
