@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Badge
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -125,20 +126,19 @@ private fun SaveSlotTile(
                     .clickable(onClick = onOpen)
                     .padding(16.dp),
             ) {
-                Text(slot.fancyName, style = MaterialTheme.typography.titleMedium)
-                if (slot.active) {
-                    SuggestionChip(
-                        onClick = onOpen,
-                        label = { Text("Active") },
-                        icon = {
-                            Icon(
-                                Icons.Filled.CheckCircle,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                            )
-                        },
-                        colors = SuggestionChipDefaults.suggestionChipColors(),
-                    )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(slot.fancyName, style = MaterialTheme.typography.titleMedium)
+                    if (slot.active) {
+                        Badge(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                        ) {
+                            Text("Active")
+                        }
+                    }
                 }
             }
 
