@@ -1,18 +1,26 @@
 package net.perfectdreams.butterscotch.android
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddToHomeScreen
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.ui.Alignment
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -61,6 +69,7 @@ fun SettingsScreen(
         ) {
             item("metadata") {
                 SettingsRow(
+                    icon = Icons.Filled.Edit,
                     title = "Metadata",
                     subtitle = "Title, icon",
                     onClick = { nav.navigate(Route.GameMetadata(gameId)) },
@@ -68,6 +77,7 @@ fun SettingsScreen(
             }
             item("manage-slots") {
                 SettingsRow(
+                    icon = Icons.Filled.Save,
                     title = "Save Slots",
                     subtitle = "${entry.saveSlots.size} slot${if (entry.saveSlots.size == 1) "" else "s"} · active: ${entry.saveSlots.first { it.active }.fancyName}",
                     onClick = { nav.navigate(Route.SaveSlotList(gameId)) },
@@ -76,6 +86,7 @@ fun SettingsScreen(
             if (pinShortcutsSupported) {
                 item("home-shortcut") {
                     SettingsRow(
+                        icon = Icons.Filled.AddToHomeScreen,
                         title = "Add Shortcut to Home Screen",
                         subtitle = "Pin a launcher icon for this game",
                         onClick = { requestPinGameShortcut(context, library, entry) },
@@ -84,6 +95,7 @@ fun SettingsScreen(
             }
             item("delete") {
                 SettingsRow(
+                    icon = Icons.Filled.Delete,
                     title = "Delete",
                     subtitle = "Removes the game and all its saves",
                     titleColor = MaterialTheme.colorScheme.error,
@@ -114,18 +126,23 @@ fun SettingsScreen(
 
 @Composable
 private fun SettingsRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
     subtitle: String? = null,
     titleColor: Color = Color.Unspecified,
     onClick: () -> Unit,
 ) {
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 24.dp, vertical = 16.dp)
+    Row(
+        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 24.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column {
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = if (titleColor == Color.Unspecified) MaterialTheme.colorScheme.primary else titleColor,
+        )
+        Spacer(Modifier.padding(end = 16.dp))
+        Column(Modifier.padding(start = 16.dp)) {
             Text(title, style = MaterialTheme.typography.titleMedium, color = titleColor)
             if (subtitle != null) {
                 Text(subtitle, style = MaterialTheme.typography.bodyMedium)
