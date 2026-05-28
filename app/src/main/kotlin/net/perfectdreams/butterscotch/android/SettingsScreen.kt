@@ -20,11 +20,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.navigation.NavHostController
 import net.perfectdreams.butterscotch.android.components.ButterscotchBackButton
 import net.perfectdreams.butterscotch.android.components.ButterscotchTopBar
 import net.perfectdreams.butterscotch.android.library.GameLibrary
+import net.perfectdreams.butterscotch.android.shortcuts.requestPinGameShortcut
 
 /**
  * Per-game settings screen. Lives under [Route.GameSettings] in the nav graph. Rows route to
@@ -44,6 +47,8 @@ fun SettingsScreen(
     // Sadly we need to do this hacky hack because when deleting this gets recomposed and gets a null entry
     val entry = library.findById(gameId) ?: return
 
+    val context = LocalContext.current
+    val pinShortcutsSupported = remember { ShortcutManagerCompat.isRequestPinShortcutSupported(context) }
     var showDeleteDialog by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -67,6 +72,15 @@ fun SettingsScreen(
                     subtitle = "${entry.saveSlots.size} slot${if (entry.saveSlots.size == 1) "" else "s"} · active: ${entry.saveSlots.first { it.active }.fancyName}",
                     onClick = { nav.navigate(Route.SaveSlotList(gameId)) },
                 )
+            }
+            if (pinShortcutsSupported) {
+                item("home-shortcut") {
+                    SettingsRow(
+                        title = "Add Shortcut to Home Screen",
+                        subtitle = "Pin a launcher icon for this game",
+                        onClick = { requestPinGameShortcut(context, library, entry) },
+                    )
+                }
             }
             item("delete") {
                 SettingsRow(
