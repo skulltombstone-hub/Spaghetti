@@ -1,7 +1,11 @@
 package net.perfectdreams.butterscotch.android
 
+import android.content.Context
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.widget.Toast
+import androidx.core.graphics.drawable.toBitmap
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,6 +15,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -37,6 +42,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.painter.BitmapPainter
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
@@ -149,19 +158,23 @@ private fun GameTile(
 
     Card(modifier = Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(
+            Row(
                 modifier = Modifier
                     .weight(1f)
                     .clickable(onClick = onLaunch)
                     .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(entry.title, style = MaterialTheme.typography.titleMedium)
-                Text(
-                    when (entry.gameType) {
-                        is GameEntry.GameType.GameMakerStudio -> "GM:S (WAD Version ${entry.gameType.wadVersion})"
-                    },
-                    style = MaterialTheme.typography.bodySmall
-                )
+                GameIcon(library, entry, modifier = Modifier.size(42.dp))
+                Column(modifier = Modifier.padding(start = 12.dp)) {
+                    Text(entry.title, style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        when (entry.gameType) {
+                            is GameEntry.GameType.GameMakerStudio -> "GM:S (WAD Version ${entry.gameType.wadVersion})"
+                        },
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
             }
 
             // The IconButtons has its own click region, so tapping them doesn't bubble into the launch click above.
@@ -195,4 +208,41 @@ private fun GameTile(
             }
         }
     }
+}
+
+/**
+ * Shows the per-game icon scraped from the bundle's first .exe at import time, or the Butterscotch
+ * app icon when no icon was extractable (no .exe / PE without resources / decode failed).
+ *
+ * The icons are tiny (<=256px) so we decode synchronously inside a `remember`; that's plenty fast
+ * for a list of a few dozen entries and avoids pulling in an image-loading dependency.
+ */
+@Composable
+private fun GameIcon(
+    library: GameLibrary,
+    entry: GameEntry,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    val file = library.iconFile(entry)
+    val bitmap = remember(entry.iconRevision) {
+        if (file.exists()) BitmapFactory.decodeFile(file.absolutePath) else null
+    } ?: remember(context) { appIconBitmap(context) }
+
+    Image(
+        painter = BitmapPainter(bitmap.asImageBitmap(), filterQuality = FilterQuality.None),
+        contentDescription = null,
+        contentScale = ContentScale.Fit,
+        modifier = modifier,
+    )
+}
+
+/**
+ * Loads the app's launcher icon as a bitmap. We can't use `painterResource(R.mipmap.ic_launcher)`
+ * because on API 26+ that resolves to an `<adaptive-icon>` XML, which Compose's painterResource
+ * refuses to load.
+ */
+private fun appIconBitmap(context: Context): android.graphics.Bitmap {
+    val drawable = context.packageManager.getApplicationIcon(context.packageName)
+    return drawable.toBitmap()
 }

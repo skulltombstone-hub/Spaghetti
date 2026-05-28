@@ -7,19 +7,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,9 +27,8 @@ import net.perfectdreams.butterscotch.android.components.ButterscotchTopBar
 import net.perfectdreams.butterscotch.android.library.GameLibrary
 
 /**
- * Per-game settings screen. Lives under [Route.GameSettings] in the nav graph. Today's only row is
- * "Delete"; future additions (export/import saves, edit title, etc.) slot in as more [SettingsRow]
- * calls in [SettingsScreen].
+ * Per-game settings screen. Lives under [Route.GameSettings] in the nav graph. Rows route to
+ * sub-screens (metadata, save slots) or trigger destructive actions (delete).
  *
  * Pops itself via [onDone] when the user backs out OR after a successful delete. If the entry is
  * missing on entry (e.g. removed by another flow), we pop immediately rather than render an empty
@@ -58,11 +51,16 @@ fun SettingsScreen(
             ButterscotchTopBar(entry.title, nav, navigationIcon = { ButterscotchBackButton(nav) })
         }
     ) { innerPadding ->
-        // LazyColumn instead of a plain Column so additional settings rows added later
-        // remain scrollable on short viewports without retrofitting the container.
         LazyColumn(
             Modifier.fillMaxSize().padding(innerPadding),
         ) {
+            item("metadata") {
+                SettingsRow(
+                    title = "Metadata",
+                    subtitle = "Title, icon",
+                    onClick = { nav.navigate(Route.GameMetadata(gameId)) },
+                )
+            }
             item("manage-slots") {
                 SettingsRow(
                     title = "Save Slots",

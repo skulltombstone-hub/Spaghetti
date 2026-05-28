@@ -13,7 +13,9 @@ data class GameEntry(
     val gameType: GameType,
     val importedAtMillis: Long,
     val favorited: Boolean,
-    val saveSlots: List<SaveSlot>
+    val saveSlots: List<SaveSlot>,
+    /** Bumped whenever the icon file is rewritten, so launcher UI invalidates its bitmap cache. */
+    val iconRevision: Long = 0,
 ) {
     @Serializable
     sealed class GameType {

@@ -7,6 +7,8 @@ import androidx.documentfile.provider.DocumentFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import net.perfectdreams.butterscotch.android.library.GameLibrary
+import net.perfectdreams.butterscotch.android.pe.IconCandidate
+import net.perfectdreams.butterscotch.android.pe.scanIconCandidates
 import java.io.File
 
 /**
@@ -52,6 +54,7 @@ object GameImporter {
             val suggestedTitle: String?,
             val wadVersion: Int,
             val folderName: String,
+            val iconCandidates: List<IconCandidate>,
         ) : Result
 
         /** The picked folder had none of [WAD_FILENAMES] at its top level. */
@@ -106,14 +109,20 @@ object GameImporter {
             name to dw.wadVersion
         } ?: (null to -1)
 
+        val iconCandidates = runCatching { scanIconCandidates(staged.bundleDir) }
+            .onFailure { Log.w(TAG, "Icon extraction failed for ${staged.id}", it) }
+            .getOrDefault(emptyList())
+
         Result.Success(
             staged = staged,
             wadFilename = wadFilename,
             suggestedTitle = suggestedTitle,
             wadVersion = wadVersion,
             folderName = folderName,
+            iconCandidates = iconCandidates,
         )
     }
+
 
     /**
      * Recursive DocumentFile → File copy. Mirrors `GameActivity.extractAssetTree`'s shape but

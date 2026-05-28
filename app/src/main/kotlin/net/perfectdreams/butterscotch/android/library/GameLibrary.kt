@@ -1,6 +1,7 @@
 package net.perfectdreams.butterscotch.android.library
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.util.Log
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
@@ -55,7 +56,15 @@ class GameLibrary private constructor(
             is GameEntry.GameType.GameMakerStudio -> entry.gameType.filename
         }
     )
-    fun gameDir(id: UUID): File = File(rootDir, "games/$id")
+    fun gameDir(id: UUID): File = File(rootDir, "games/data/$id")
+
+    /** Per-game derived assets (icon, future thumbnails). Separate from `data/` so we can rebuild them. */
+    fun assetsDir(id: UUID): File = File(rootDir, "games/assets/$id")
+    fun assetsDir(entry: GameEntry): File = assetsDir(entry.id)
+
+    /** Cached PNG icon for [id], if extraction succeeded. The file may not exist. */
+    fun iconFile(id: UUID): File = File(assetsDir(id), "icon.png")
+    fun iconFile(entry: GameEntry): File = iconFile(entry.id)
 
     fun findById(id: UUID): GameEntry? = entries.firstOrNull { it.id == id }
     fun findById(id: String): GameEntry? = findById(UUID.fromString(id))
@@ -73,8 +82,17 @@ class GameLibrary private constructor(
         return StagedGame(id, File(dir, "bundle"), File(dir, "saves"))
     }
 
-    /** Add a staged import to the library and persist. */
-    fun commit(staged: StagedGame, title: String, gameType: GameEntry.GameType) {
+    /**
+     * Add a staged import to the library and persist. If [icon] is non-null, it is encoded as PNG
+     * into the per-game assets dir as `icon.png`; pass null to commit without an icon (the
+     * library list will fall back to the app icon at display time).
+     */
+    fun commit(
+        staged: StagedGame,
+        title: String,
+        gameType: GameEntry.GameType,
+        icon: Bitmap? = null,
+    ) {
         val initialSlotId = UUID.randomUUID()
         File(gameDir(staged.id), "saves/$initialSlotId").mkdirs()
         val entry = GameEntry(
@@ -92,6 +110,14 @@ class GameLibrary private constructor(
             )
         )
         entries.add(entry)
+
+        if (icon != null) {
+            runCatching {
+                val out = iconFile(staged.id).apply { parentFile?.mkdirs() }
+                out.outputStream().use { icon.compress(Bitmap.CompressFormat.PNG, 100, it) }
+            }.onFailure { Log.w(TAG, "Failed to write icon for ${staged.id}", it) }
+        }
+
         save()
     }
 
@@ -110,8 +136,40 @@ class GameLibrary private constructor(
     fun remove(id: UUID) {
         if (entries.removeAll { it.id == id }) {
             gameDir(id).deleteRecursively()
+            assetsDir(id).deleteRecursively()
             save()
         }
+    }
+
+    fun setTitle(id: UUID, title: String) {
+        require(title.isNotBlank()) { "Title cannot be blank" }
+        update(id) { it.copy(title = title) }
+        syncOrder()
+        save()
+    }
+
+    /**
+     * Replace (or clear) the per-game icon at runtime. Writes the bitmap as PNG to
+     * `assetsDir/icon.png`, or deletes it when [bitmap] is null. Bumps the entry afterward so any
+     * UI that reads the icon file recomposes — without that, the library list would happily keep
+     * displaying the old decoded bitmap from its remember cache.
+     */
+    fun setIcon(id: UUID, bitmap: Bitmap?) {
+        val out = iconFile(id)
+        if (bitmap == null) {
+            out.delete()
+        } else {
+            out.parentFile?.mkdirs()
+            runCatching {
+                out.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+            }.onFailure {
+                Log.w(TAG, "Failed to write icon for $id", it)
+                return
+            }
+        }
+        // Bump revision so observers (notably GameIcon's remember cache) recompose.
+        update(id) { it.copy(iconRevision = it.iconRevision + 1) }
+        save()
     }
 
     /**

@@ -9,8 +9,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.navigation.NavHostController
 
 @Composable
-fun ButterscotchBackButton(nav: NavHostController) {
-    IconButton(onClick = { nav.popBackStack() }) {
+fun ButterscotchBackButton(nav: NavHostController, onClick: () -> Unit = { nav.popBackStack() }) {
+    IconButton(onClick = onClick) {
         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.Black)
     }
 }

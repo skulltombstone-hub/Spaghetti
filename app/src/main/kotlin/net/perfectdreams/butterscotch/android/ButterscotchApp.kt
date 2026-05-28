@@ -47,6 +47,14 @@ fun ButterscotchApp() {
                 nav = nav
             )
         }
+        composable<Route.GameMetadata> { backStackEntry ->
+            val args = backStackEntry.toRoute<Route.GameMetadata>()
+            GameMetadataScreen(
+                library = library,
+                gameId = args.gameId,
+                nav = nav,
+            )
+        }
         composable<Route.SaveSlotList> { backStackEntry ->
             val args = backStackEntry.toRoute<Route.SaveSlotList>()
             SaveSlotListScreen(

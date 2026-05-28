@@ -1,5 +1,6 @@
 package net.perfectdreams.butterscotch.android
 
+import android.graphics.Bitmap
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -31,9 +32,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import net.perfectdreams.butterscotch.android.components.ButterscotchBackButton
 import net.perfectdreams.butterscotch.android.components.ButterscotchTopBar
+import net.perfectdreams.butterscotch.android.components.MetadataForm
 import net.perfectdreams.butterscotch.android.library.GameEntry.GameType
 import net.perfectdreams.butterscotch.android.library.GameLibrary
 
@@ -81,7 +85,25 @@ fun ImportScreen(
 
     Scaffold(
         topBar = {
-            ButterscotchTopBar("Add Game", nav, navigationIcon = { ButterscotchBackButton(nav) })
+            ButterscotchTopBar(
+                when (state) {
+                    is ImportUIState.Configure -> "Configure Game"
+                    else -> "Add Game"
+                },
+                nav,
+                navigationIcon = {
+                    when (val s = state) {
+                        is ImportUIState.Configure -> {
+                            ButterscotchBackButton(nav) {
+                                library.discardStaging(s.result.staged)
+                                state = ImportUIState.Intro
+                            }
+                        }
+                        else -> ButterscotchBackButton(nav)
+                    }
+
+                }
+            )
         },
     ) { innerPadding ->
         Box(Modifier.fillMaxSize().padding(innerPadding).padding(24.dp)) {
@@ -90,21 +112,18 @@ fun ImportScreen(
                 ImportUIState.Copying -> CopyingPane()
                 is ImportUIState.Configure -> ConfigurePane(
                     result = s.result,
-                    onSave = { title ->
+                    onSave = { title, icon ->
                         library.commit(
                             s.result.staged,
                             title,
                             GameType.GameMakerStudio(
                                 s.result.wadVersion,
                                 s.result.wadFilename
-                            )
+                            ),
+                            icon = icon,
                         )
                         nav.popBackStack()
-                    },
-                    onCancel = {
-                        library.discardStaging(s.result.staged)
-                        state = ImportUIState.Intro
-                    },
+                    }
                 )
                 is ImportUIState.Error -> ErrorPane(
                     message = s.message,
@@ -149,44 +168,32 @@ private fun CopyingPane() {
 @Composable
 private fun ConfigurePane(
     result: GameImporter.Result.Success,
-    onSave: (String) -> Unit,
-    onCancel: () -> Unit,
+    onSave: (title: String, icon: Bitmap?) -> Unit
 ) {
     // suggestedTitle comes from GEN8 (may be null for pre-WAD10 games); fall back to the folder
     // name so the user never sees an empty field.
     val initial = result.suggestedTitle ?: result.folderName
     var title by rememberSaveable(result.staged.id) { mutableStateOf(initial) }
-
-    Column(Modifier.fillMaxSize()) {
-        Text("Game configuration", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(16.dp))
-
-        OutlinedTextField(
-            value = title,
-            onValueChange = { title = it },
-            label = { Text("Title") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
-
-        Spacer(Modifier.height(16.dp))
-        Text("Detected WAD: ${result.wadFilename}", style = MaterialTheme.typography.bodyMedium)
-        if (result.wadVersion >= 0) {
-            Text("WAD version: ${result.wadVersion}", style = MaterialTheme.typography.bodyMedium)
-        }
-
-        Spacer(Modifier.height(24.dp))
-        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
-            Column(horizontalAlignment = Alignment.End) {
-                Button(
-                    onClick = { onSave(title.ifBlank { initial }) },
-                    enabled = title.isNotBlank(),
-                ) { Text("Save") }
-                Spacer(Modifier.height(8.dp))
-                OutlinedButton(onClick = onCancel) { Text("Cancel") }
-            }
-        }
+    var selectedIcon by remember(result.staged.id) {
+        mutableStateOf<Bitmap?>(result.iconCandidates.firstOrNull()?.bitmap)
     }
+
+    MetadataForm(
+        title = title,
+        onTitleChange = { title = it },
+        selectedIcon = selectedIcon,
+        onIconChange = { selectedIcon = it },
+        loadCandidates = { result.iconCandidates },
+        saveEnabled = title.isNotBlank(),
+        onSave = { onSave(title.ifBlank { initial }, selectedIcon) },
+        middleContent = {
+            Text("Detected WAD: ${result.wadFilename}", style = MaterialTheme.typography.bodyMedium)
+            if (result.wadVersion >= 0) {
+                Text("WAD version: ${result.wadVersion}", style = MaterialTheme.typography.bodyMedium)
+            }
+            Spacer(Modifier.height(16.dp))
+        },
+    )
 }
 
 @Composable
