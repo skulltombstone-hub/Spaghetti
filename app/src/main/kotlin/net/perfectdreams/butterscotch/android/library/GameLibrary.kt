@@ -214,6 +214,30 @@ class GameLibrary private constructor(
         save()
     }
 
+    /**
+     * Duplicates [sourceSlotId] in [gameId] into a new inactive slot named [name], copying the
+     * source slot's directory contents verbatim. Returns the freshly created slot id.
+     */
+    fun copySlot(gameId: UUID, sourceSlotId: UUID, name: String): UUID {
+        val entry = findById(gameId) ?: error("No such game: $gameId")
+        require(entry.saveSlots.any { it.id == sourceSlotId }) { "Unknown slot $sourceSlotId for game $gameId" }
+        val newId = UUID.randomUUID()
+        val srcDir = slotDir(entry, sourceSlotId)
+        val dstDir = slotDir(entry, newId).apply { mkdirs() }
+        if (srcDir.exists()) srcDir.copyRecursively(dstDir, overwrite = true)
+        update(gameId) { e ->
+            e.copy(
+                saveSlots = e.saveSlots + GameEntry.SaveSlot(
+                    id = newId,
+                    active = false,
+                    fancyName = name,
+                )
+            )
+        }
+        save()
+        return newId
+    }
+
     fun renameSlot(gameId: UUID, slotId: UUID, name: String) {
         update(gameId) { entry ->
             entry.copy(

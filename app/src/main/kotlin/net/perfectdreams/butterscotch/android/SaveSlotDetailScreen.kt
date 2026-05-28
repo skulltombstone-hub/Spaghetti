@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.CallMade
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
@@ -95,6 +96,7 @@ fun SaveSlotDetailScreen(
     }
 
     var showRenameDialog by remember { mutableStateOf(false) }
+    var showCopyDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showOverwriteConfirm by remember { mutableStateOf<android.net.Uri?>(null) }
     var busy by remember { mutableStateOf(false) }
@@ -187,6 +189,15 @@ fun SaveSlotDetailScreen(
                     },
                 )
             }
+            item("action-copy") {
+                ActionRow(
+                    icon = Icons.Filled.ContentCopy,
+                    title = "Duplicate slot",
+                    subtitle = "Create a new slot with a copy of these files",
+                    enabled = !busy,
+                    onClick = { showCopyDialog = true },
+                )
+            }
             item("action-rename") {
                 ActionRow(
                     icon = Icons.Filled.Edit,
@@ -247,6 +258,22 @@ fun SaveSlotDetailScreen(
                 showRenameDialog = false
             },
             onDismiss = { showRenameDialog = false },
+        )
+    }
+    if (showCopyDialog) {
+        CopySlotDialog(
+            defaultName = "${slot.fancyName} (Copy)",
+            onConfirm = { newName ->
+                showCopyDialog = false
+                val finalName = newName.ifBlank { "${slot.fancyName} (Copy)" }
+                try {
+                    library.copySlot(entry.id, slotUuid, finalName)
+                    Toast.makeText(context, "Duplicated to \"$finalName\"", Toast.LENGTH_SHORT).show()
+                } catch (e: Exception) {
+                    Toast.makeText(context, "Duplicate failed: ${e.message ?: "unknown error"}", Toast.LENGTH_LONG).show()
+                }
+            },
+            onDismiss = { showCopyDialog = false },
         )
     }
     if (showDeleteDialog) {
@@ -364,6 +391,33 @@ private fun RenameDialog(
         },
         confirmButton = {
             TextButton(onClick = { onConfirm(name) }) { Text("Save") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        },
+    )
+}
+
+@Composable
+private fun CopySlotDialog(
+    defaultName: String,
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var name by remember { mutableStateOf(defaultName) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Duplicate slot") },
+        text = {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("Name for the new slot") },
+                singleLine = true,
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(name) }) { Text("Duplicate") }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cancel") }
