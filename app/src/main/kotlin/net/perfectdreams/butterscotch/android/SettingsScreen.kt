@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.AddToHomeScreen
 import androidx.compose.material.icons.filled.AddToHomeScreen
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -87,7 +88,7 @@ fun SettingsScreen(
             if (pinShortcutsSupported) {
                 item("home-shortcut") {
                     SettingsRow(
-                        icon = Icons.Filled.AddToHomeScreen,
+                        icon = Icons.AutoMirrored.Default.AddToHomeScreen,
                         title = "Add Shortcut to Home Screen",
                         subtitle = "Pin a launcher icon for this game",
                         onClick = { requestPinGameShortcut(context, library, entry) },
