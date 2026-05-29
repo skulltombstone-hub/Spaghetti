@@ -131,6 +131,7 @@ class GameLibrary private constructor(
         if (index == -1)
             error("Trying to update a entry that doesn't exist! $id")
         entries[index] = block.invoke(entries[index])
+        save()
     }
 
     fun remove(id: UUID) {

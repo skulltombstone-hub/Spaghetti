@@ -2,9 +2,17 @@ package net.perfectdreams.butterscotch.android.layouts
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import net.perfectdreams.butterscotch.android.UUIDAsStringSerializer
+import java.util.UUID
 
 @Serializable
 sealed class GamepadElement {
+    /**
+     * Stable identity for this element, independent of its position in the layout list. The editor
+     * addresses elements by this id (drag/edit/delete) so mutating the list (add/remove) can never
+     * make an in-flight edit point at the wrong element.
+     */
+    abstract val id: UUID
     /**
      * The X position of the element on the overlay (percentage, 0..1, based on the overlay width)
      */
@@ -34,8 +42,10 @@ sealed class GamepadElement {
          * The label of the button. If null falls back to a value derived from the [binding].
          */
         val label: String?,
-        val type: KeyTrigger,
-        val binding: InputBinding
+        val trigger: KeyTrigger,
+        val binding: InputBinding,
+        @Serializable(with = UUIDAsStringSerializer::class)
+        override val id: UUID
     ) : GamepadElement()
 
     @Serializable
@@ -49,6 +59,8 @@ sealed class GamepadElement {
         val down: InputBinding,
         val left: InputBinding,
         val right: InputBinding,
+        @Serializable(with = UUIDAsStringSerializer::class)
+        override val id: UUID
     ) : GamepadElement()
 
     @Serializable
@@ -58,6 +70,8 @@ sealed class GamepadElement {
         override val positionY: Double,
         override val scale: Double,
         override val opacity: Double,
-        val stick: GamepadStick
+        val stick: GamepadStick,
+        @Serializable(with = UUIDAsStringSerializer::class)
+        override val id: UUID
     ) : GamepadElement()
 }

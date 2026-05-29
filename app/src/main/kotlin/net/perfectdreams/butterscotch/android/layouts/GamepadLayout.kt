@@ -8,6 +8,7 @@ import java.util.UUID
 data class GamepadLayout(
     @Serializable(with = UUIDAsStringSerializer::class)
     val id: UUID,
+    val fancyName: String,
     val orientation: GamepadTargetOrientation,
     val element: List<GamepadElement>
 ) {

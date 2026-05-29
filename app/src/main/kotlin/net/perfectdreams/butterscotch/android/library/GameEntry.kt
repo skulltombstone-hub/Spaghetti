@@ -3,6 +3,7 @@ package net.perfectdreams.butterscotch.android.library
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import net.perfectdreams.butterscotch.android.UUIDAsStringSerializer
+import net.perfectdreams.butterscotch.android.layouts.LayoutLibrary
 import java.util.UUID
 
 @Serializable
@@ -16,6 +17,10 @@ data class GameEntry(
     val saveSlots: List<SaveSlot>,
     /** Bumped whenever the icon file is rewritten, so launcher UI invalidates its bitmap cache. */
     val iconRevision: Long = 0,
+    @Serializable(with = UUIDAsStringSerializer::class)
+    val portraitLayout: UUID = LayoutLibrary.DEFAULT_PORTRAIT_LAYOUT,
+    @Serializable(with = UUIDAsStringSerializer::class)
+    val landscapeLayout: UUID = LayoutLibrary.DEFAULT_LANDSCAPE_LAYOUT,
 ) {
     @Serializable
     sealed class GameType {

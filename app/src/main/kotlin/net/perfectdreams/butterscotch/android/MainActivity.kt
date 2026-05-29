@@ -5,19 +5,21 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import net.perfectdreams.butterscotch.android.library.GameLibrary
 import net.perfectdreams.butterscotch.android.theme.ButterscotchAndroidTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        Libraries.loadGameLibrary(this.applicationContext)
+        Libraries.loadLayoutLibrary(this.applicationContext)
+
         if (intent?.action == ACTION_LAUNCH_GAME) {
             val gameId = intent.getStringExtra(GameActivity.EXTRA_GAME_ID)
             // Clear so a config change / recreate doesn't re-trigger the forward.
             intent.action = null
             intent.removeExtra(GameActivity.EXTRA_GAME_ID)
-            if (gameId != null && GameLibrary.load(this).findById(gameId) != null) {
+            if (gameId != null && Libraries.getGameLibrary().findById(gameId) != null) {
                 startActivity(Intent(this, GameActivity::class.java).apply {
                     putExtra(GameActivity.EXTRA_GAME_ID, gameId)
                 })

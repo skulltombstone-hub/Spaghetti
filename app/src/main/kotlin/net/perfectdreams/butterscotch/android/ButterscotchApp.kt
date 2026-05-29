@@ -10,6 +10,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import net.perfectdreams.butterscotch.android.layouts.LayoutLibrary
 import net.perfectdreams.butterscotch.android.library.GameLibrary
 
 /**
@@ -17,8 +18,8 @@ import net.perfectdreams.butterscotch.android.library.GameLibrary
  */
 @Composable
 fun ButterscotchApp() {
-    val context = LocalContext.current
-    val library = remember { GameLibrary.load(context) }
+    val library = Libraries.getGameLibrary()
+    val layouts = Libraries.getLayoutLibrary()
     val nav = rememberNavController()
 
     NavHost(

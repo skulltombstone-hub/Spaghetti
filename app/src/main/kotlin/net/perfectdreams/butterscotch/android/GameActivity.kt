@@ -28,7 +28,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.viewinterop.AndroidView
-import net.perfectdreams.butterscotch.android.library.GameLibrary
+import net.perfectdreams.butterscotch.android.components.GameControls
+import net.perfectdreams.butterscotch.android.components.MenuOverlay
+import net.perfectdreams.butterscotch.android.components.VirtualKeyState
+import net.perfectdreams.butterscotch.android.layouts.LayoutLibrary
+import java.util.UUID
 
 /**
  * Hosts a [SurfaceView] that the native side draws into, with a Compose-based virtual gamepad
@@ -49,6 +53,9 @@ class GameActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        Libraries.loadGameLibrary(this.applicationContext)
+        Libraries.loadLayoutLibrary(this.applicationContext)
+
         // Keep the screen on while the game runs - matches the GLFW build's default behavior.
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
@@ -67,7 +74,7 @@ class GameActivity : ComponentActivity() {
             finish()
             return
         }
-        val library = GameLibrary.load(this)
+        val library = Libraries.getGameLibrary()
         val entry = library.findById(gameId)
         if (entry == null) {
             Log.e(TAG, "No library entry for gameId=$gameId")
@@ -96,10 +103,6 @@ class GameActivity : ComponentActivity() {
             // into the runner with no Composable left to release them.
             val keys = remember { VirtualKeyState(butterscotchRunner) }
 
-            // The editable gamepad layout lives here (not inside GameControls) so edits survive an
-            // Overlay/Stacked reflow, which recomposes a different GameControls call site. In-memory
-            // only - we do not persist it yet.
-            var layout by remember { mutableStateOf(defaultGamepadLayout) }
             var editMode by remember { mutableStateOf(false) }
             // Toggling edit mode drops any held keys so a press in flight does not stick.
             LaunchedEffect(editMode) { keys.releaseAll() }
@@ -107,7 +110,8 @@ class GameActivity : ComponentActivity() {
             // Auto-finish when the native runner reports it has exited (game quit, fatal error).
             val hasExited = ButterscotchNative.hasExited
             LaunchedEffect(hasExited) {
-                if (hasExited) finish()
+                if (hasExited)
+                    finish()
             }
 
             // movableContentOf wraps the SurfaceView so re-parenting it between Overlay/Stacked
@@ -153,7 +157,39 @@ class GameActivity : ComponentActivity() {
                     val deviceAspect = constraints.maxWidth.toFloat() / constraints.maxHeight.toFloat()
                     val layoutMode = pickLayoutMode(gameAspect, deviceAspect)
 
-                    LaunchedEffect(layoutMode) { keys.releaseAll() }
+                    LaunchedEffect(layoutMode) {
+                        keys.releaseAll()
+                    }
+
+                    val layoutLib = Libraries.getLayoutLibrary()
+                    val isPortrait = constraints.maxHeight >= constraints.maxWidth
+
+                    // Re-read the entry from the (snapshot-backed) library rather than the onCreate
+                    // capture, so a Save As repoint of portraitLayout/landscapeLayout is visible here.
+                    val liveEntry = library.findById(gameId) ?: entry
+                    // Resolve this game's assigned layout for the current orientation, falling back to
+                    // the built-in default if the id is missing. Keyed on (isPortrait, assignedId) so it
+                    // re-resolves on rotation AND when the assignment changes (e.g. after Save As). An
+                    // Overlay/Stacked reflow changes neither, so in-progress edits survive it.
+                    val assignedId = if (isPortrait) liveEntry.portraitLayout else liveEntry.landscapeLayout
+                    val fallbackId = if (isPortrait) LayoutLibrary.DEFAULT_PORTRAIT_LAYOUT else LayoutLibrary.DEFAULT_LANDSCAPE_LAYOUT
+
+                    Log.i(TAG, "Using $assignedId for the gamepad layout... The fallback ID is $fallbackId")
+
+                    var layout by remember(isPortrait, assignedId) { mutableStateOf(layoutLib.findById(assignedId) ?: layoutLib.findById(fallbackId)!!) }
+                    // Save only applies to user layouts; the built-in defaults are read-only.
+                    val canSave = layout.id != LayoutLibrary.DEFAULT_PORTRAIT_LAYOUT && layout.id != LayoutLibrary.DEFAULT_LANDSCAPE_LAYOUT
+                    val onSave = { layoutLib.upsert(layout) }
+                    val onSaveAs = { name: String ->
+                        // Fork to a fresh id with the given name, persist it, and point this game's
+                        // orientation-specific layout at the copy so it loads next time. Keep editing it.
+                        val forked = layout.copy(id = UUID.randomUUID(), fancyName = name)
+                        layoutLib.upsert(forked)
+                        library.update(entry.id) { e ->
+                            if (isPortrait) e.copy(portraitLayout = forked.id) else e.copy(landscapeLayout = forked.id)
+                        }
+                        layout = forked
+                    }
 
                     when (layoutMode) {
                         LayoutMode.Overlay -> {
@@ -164,6 +200,9 @@ class GameActivity : ComponentActivity() {
                                     editMode = editMode,
                                     onLayoutChange = { layout = it },
                                     onExitEditMode = { editMode = false },
+                                    canSave = canSave,
+                                    onSave = onSave,
+                                    onSaveAs = onSaveAs,
                                     keys = keys,
                                     modifier = Modifier.fillMaxSize()
                                 )
@@ -181,6 +220,9 @@ class GameActivity : ComponentActivity() {
                                     editMode = editMode,
                                     onLayoutChange = { layout = it },
                                     onExitEditMode = { editMode = false },
+                                    canSave = canSave,
+                                    onSave = onSave,
+                                    onSaveAs = onSaveAs,
                                     keys = keys,
                                     modifier = Modifier
                                         .fillMaxWidth()
