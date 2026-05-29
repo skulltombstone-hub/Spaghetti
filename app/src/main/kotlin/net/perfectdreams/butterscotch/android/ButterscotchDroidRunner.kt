@@ -146,6 +146,10 @@ class ButterscotchDroidRunner(val dataWinPath: String, val savesPath: String, va
 
     sealed interface InputEvent {
         data class Key(val code: Int, val isDown: Boolean) : InputEvent
+        data class GamepadButton(val device: Int, val button: Int, val isDown: Boolean) : InputEvent
+        data class GamepadAxis(val device: Int, val axis: Int, val value: Float) : InputEvent
+        data class GamepadConnected(val device: Int, val name: String?) : InputEvent
+        data class GamepadDisconnected(val device: Int) : InputEvent
     }
 
     /**
@@ -155,6 +159,26 @@ class ButterscotchDroidRunner(val dataWinPath: String, val savesPath: String, va
      */
     fun onKey(keyCode: Int, isDown: Boolean) {
         inputChannel.trySend(InputEvent.Key(keyCode, isDown))
+    }
+
+    // Gamepad queueing. All safe to call from the UI thread (just enqueues into the Channel). The
+    // render thread drains them in drainPendingInput and forwards to the native gamepad feed. The
+    // Channel preserves ordering, so a Connected enqueued before its buttons is applied first.
+
+    fun onGamepadButton(device: Int, button: Int, isDown: Boolean) {
+        inputChannel.trySend(InputEvent.GamepadButton(device, button, isDown))
+    }
+
+    fun onGamepadAxis(device: Int, axis: Int, value: Float) {
+        inputChannel.trySend(InputEvent.GamepadAxis(device, axis, value))
+    }
+
+    fun onGamepadConnected(device: Int, name: String?) {
+        inputChannel.trySend(InputEvent.GamepadConnected(device, name))
+    }
+
+    fun onGamepadDisconnected(device: Int) {
+        inputChannel.trySend(InputEvent.GamepadDisconnected(device))
     }
 
     /**
@@ -170,6 +194,10 @@ class ButterscotchDroidRunner(val dataWinPath: String, val savesPath: String, va
                     ButterscotchNative.onKeyDown(event.code)
                 else
                     ButterscotchNative.onKeyUp(event.code)
+                is InputEvent.GamepadButton -> ButterscotchNative.gamepadButton(event.device, event.button, event.isDown)
+                is InputEvent.GamepadAxis -> ButterscotchNative.gamepadAxis(event.device, event.axis, event.value)
+                is InputEvent.GamepadConnected -> ButterscotchNative.gamepadConnected(event.device, event.name)
+                is InputEvent.GamepadDisconnected -> ButterscotchNative.gamepadDisconnected(event.device)
             }
         }
     }

@@ -2,12 +2,14 @@ package net.perfectdreams.butterscotch.android
 
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Switch
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
@@ -20,6 +22,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
@@ -60,12 +63,14 @@ fun GameMetadataScreen(
     var portraitLayout by rememberSaveable { mutableStateOf(entry.portraitLayout) }
     var landscapeLayout by rememberSaveable { mutableStateOf(entry.landscapeLayout) }
     var runnerOs by rememberSaveable { mutableStateOf(entry.runnerOs) }
+    var enablePhysicalControllers by rememberSaveable { mutableStateOf(entry.enablePhysicalControllers) }
 
     val titleTrimmed = title.trim()
     val titleChanged = titleTrimmed.isNotBlank() && titleTrimmed != entry.title
     val iconChanged = selectedIcon !== originalIcon
     val layoutsChanged = portraitLayout != entry.portraitLayout || landscapeLayout != entry.landscapeLayout
     val runnerOsChanged = runnerOs != entry.runnerOs
+    val controllersChanged = enablePhysicalControllers != entry.enablePhysicalControllers
 
     Scaffold(
         topBar = {
@@ -98,14 +103,20 @@ fun GameMetadataScreen(
                         onSelect = { runnerOs = it },
                     )
                     Spacer(Modifier.height(16.dp))
+                    ControllerToggle(
+                        checked = enablePhysicalControllers,
+                        onChange = { enablePhysicalControllers = it },
+                    )
+                    Spacer(Modifier.height(16.dp))
                 },
                 loadCandidates = { scanIconCandidates(gameLibrary.bundleDir(entry)) },
-                saveEnabled = titleChanged || iconChanged || layoutsChanged || runnerOsChanged,
+                saveEnabled = titleChanged || iconChanged || layoutsChanged || runnerOsChanged || controllersChanged,
                 onSave = {
                     if (titleChanged) gameLibrary.setTitle(entry.id, titleTrimmed)
                     if (iconChanged) gameLibrary.setIcon(entry.id, selectedIcon)
                     if (layoutsChanged) gameLibrary.update(entry.id) { it.copy(portraitLayout = portraitLayout, landscapeLayout = landscapeLayout) }
                     if (runnerOsChanged) gameLibrary.update(entry.id) { it.copy(runnerOs = runnerOs) }
+                    if (controllersChanged) gameLibrary.update(entry.id) { it.copy(enablePhysicalControllers = enablePhysicalControllers) }
                     nav.popBackStack()
                 },
             )
@@ -187,5 +198,22 @@ private fun OsDropdown(
                 )
             }
         }
+    }
+}
+
+// Toggles whether physical controllers (Bluetooth/USB gamepads) feed this game's GML gamepad_*
+// builtins. Staged and committed on Save like the other fields. Off is an escape hatch for games
+// that misbehave when a controller is attached (e.g. ones that auto-switch to a console UI).
+@Composable
+private fun ControllerToggle(
+    checked: Boolean,
+    onChange: (Boolean) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text("Enable physical controllers", modifier = Modifier.weight(1f))
+        Switch(checked = checked, onCheckedChange = onChange)
     }
 }

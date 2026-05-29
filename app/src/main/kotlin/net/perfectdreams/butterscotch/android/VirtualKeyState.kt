@@ -48,13 +48,14 @@ class VirtualKeyState(val runner: ButterscotchDroidRunner) {
         refs.clear()
     }
 
-    // Forward a binding edge to the runner. Keyboard goes through the existing key path. Gamepad
-    // buttons have no host->runner transport yet (that needs a gamepad JNI bridge), so they are
-    // dropped for now - the current default layout only uses keyboard bindings.
+    // Forward a binding edge to the runner. Keyboard goes through the existing key path. The
+    // host->runner gamepad transport now exists (see ButterscotchDroidRunner.onGamepad* / GamepadRouter),
+    // but the on-screen virtual pad is intentionally kept on keyboard bindings for now - only physical
+    // controllers feed the GML gamepad_* builtins. The default layouts use keyboard bindings anyway.
     private fun dispatch(binding: InputBinding, isDown: Boolean) {
         when (binding) {
             is InputBinding.Keyboard -> runner.onKey(binding.vk, isDown)
-            is InputBinding.GamepadButton -> {} // TODO: wire once the gamepad axis/button JNI bridge exists
+            is InputBinding.GamepadButton -> {} // Virtual-pad gamepad bindings are not wired (physical-only for now)
         }
     }
 }

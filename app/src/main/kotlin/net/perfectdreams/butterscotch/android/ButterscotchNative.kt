@@ -80,6 +80,30 @@ object ButterscotchNative {
     /** Forward a key-up to the runner directly. See [onKeyDown] for threading rules. */
     external fun onKeyUp(keyCode: Int)
 
+    // ===[ Gamepad feed — render thread only, same rules as onKeyDown ]===
+    //
+    // Event-driven feed into the native RunnerGamepad subsystem. The host translates Android
+    // KeyEvent / MotionEvent into canonical slot indices and pushes them through the same input
+    // [Channel] as keys (see ButterscotchDroidRunner.onGamepad*); the render thread drains them
+    // between [beginFrame] and [stepAndDraw] and calls these. Never call these off the render thread.
+    //
+    // [button] is the canonical RunnerGamepad slot index (0 = face1/A .. 16 = home), [axis] is
+    // 0 = LH, 1 = LV, 2 = RH, 3 = RV, [value] is a raw normalized axis reading in [-1, 1] (the
+    // runner applies its own deadzone on read). Button/axis events auto-connect their slot on the C
+    // side, so the feed survives the runner rebuild that game_change performs.
+
+    /** Mark a controller present in [device] (0-based slot). [name] is shown via GML gamepad_get_description. */
+    external fun gamepadConnected(device: Int, name: String?)
+
+    /** Mark the controller in [device] gone and clear its held state. */
+    external fun gamepadDisconnected(device: Int)
+
+    /** Forward a gamepad button edge. [button] is a canonical slot index (0..16). */
+    external fun gamepadButton(device: Int, button: Int, isDown: Boolean)
+
+    /** Forward a raw analog axis value in [-1, 1]. [axis] is 0..3 (LH, LV, RH, RV). */
+    external fun gamepadAxis(device: Int, axis: Int, value: Float)
+
     /**
      * Audio update + `Runner_step` + draw sequence. Returns false when the runner has asked to
      * exit. The caller is responsible for `eglSwapBuffers` after this returns (see

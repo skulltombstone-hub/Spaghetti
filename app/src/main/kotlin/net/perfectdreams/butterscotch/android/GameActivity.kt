@@ -1,8 +1,13 @@
 package net.perfectdreams.butterscotch.android
 
+import android.hardware.input.InputManager
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
+import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.SurfaceHolder
 import android.view.SurfaceView
 import android.view.WindowManager
@@ -48,6 +53,13 @@ import java.util.UUID
  */
 class GameActivity : ComponentActivity() {
     var butterscotchRunner: ButterscotchDroidRunner? = null
+
+    // Physical-controller plumbing. Both stay null when the game has physical controllers disabled,
+    // which makes the dispatch overrides fall straight through to super. The router lives for the
+    // activity's lifetime; the InputManager listener is (un)registered around onResume/onPause so we
+    // don't hold it (or held buttons) while backgrounded.
+    private var gamepadRouter: GamepadRouter? = null
+    private var inputDeviceListener: InputManager.InputDeviceListener? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -95,6 +107,18 @@ class GameActivity : ComponentActivity() {
 
         val butterscotchRunner = ButterscotchDroidRunner(wadFile.absolutePath, savesDir.absolutePath, entry.runnerOs.nativeValue)
         this.butterscotchRunner = butterscotchRunner
+
+        // Wire physical controllers into the native gamepad feed when this game opts in. The listener
+        // is registered later in onResume; here we just build the router + its callbacks.
+        if (entry.enablePhysicalControllers) {
+            val router = GamepadRouter(butterscotchRunner)
+            gamepadRouter = router
+            inputDeviceListener = object : InputManager.InputDeviceListener {
+                override fun onInputDeviceAdded(deviceId: Int) = router.onDeviceAdded(deviceId)
+                override fun onInputDeviceRemoved(deviceId: Int) = router.onDeviceRemoved(deviceId)
+                override fun onInputDeviceChanged(deviceId: Int) = router.onDeviceChanged(deviceId)
+            }
+        }
 
         setContent {
             // VirtualKeyState lives here (not inside the gamepad) so we can release-all on layout
@@ -241,6 +265,39 @@ class GameActivity : ComponentActivity() {
                 )
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        val router = gamepadRouter ?: return
+        val listener = inputDeviceListener ?: return
+        getSystemService(InputManager::class.java)?.registerInputDeviceListener(listener, Handler(Looper.getMainLooper()))
+        // Pick up controllers that are already attached (and re-attach any that arrived while paused).
+        router.refresh()
+    }
+
+    override fun onPause() {
+        val router = gamepadRouter
+        val listener = inputDeviceListener
+        if (router != null && listener != null) {
+            getSystemService(InputManager::class.java)?.unregisterInputDeviceListener(listener)
+            // Drop every controller so nothing is left held down while we're backgrounded.
+            router.releaseAll()
+        }
+        super.onPause()
+    }
+
+    // Route physical controller input before it reaches the Compose tree. Gamepad KeyEvents and
+    // joystick MotionEvents that belong to a managed controller are consumed here; everything else
+    // (touch, volume keys, back, a real keyboard) falls through to normal dispatch.
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (gamepadRouter?.handleKeyEvent(event) == true) return true
+        return super.dispatchKeyEvent(event)
+    }
+
+    override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
+        if (gamepadRouter?.handleMotionEvent(event) == true) return true
+        return super.dispatchGenericMotionEvent(event)
     }
 
     override fun onDestroy() {
