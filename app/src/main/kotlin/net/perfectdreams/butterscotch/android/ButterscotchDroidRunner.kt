@@ -68,8 +68,10 @@ class ButterscotchDroidRunner(val dataWinPath: String, val savesPath: String) {
                     val stepStatus = ButterscotchNative.stepAndDraw(egl.width, egl.height, audioDt)
 
                     when (stepStatus) {
-                        ButterscotchNative.BUTTERSCOTCH_DROID_CONTINUE -> {
-                            egl.swapBuffers()
+                        ButterscotchNative.BUTTERSCOTCH_DROID_CONTINUE,
+                        ButterscotchNative.BUTTERSCOTCH_DROID_CONTINUE_NO_SWAP -> {
+                            if (stepStatus == ButterscotchNative.BUTTERSCOTCH_DROID_CONTINUE)
+                                egl.swapBuffers()
 
                             val hz = ButterscotchNative.getTargetFrameHz()
                             if (hz > 0) {

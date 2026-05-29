@@ -27,6 +27,7 @@ import kotlinx.coroutines.channels.Channel
 object ButterscotchNative {
     const val BUTTERSCOTCH_DROID_CONTINUE = 0
     const val BUTTERSCOTCH_DROID_SHOULD_EXIT = 1
+    const val BUTTERSCOTCH_DROID_CONTINUE_NO_SWAP = 2
 
     init {
         System.loadLibrary("butterscotch")
