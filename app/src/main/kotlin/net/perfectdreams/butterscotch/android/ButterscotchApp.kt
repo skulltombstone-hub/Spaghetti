@@ -9,6 +9,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import net.perfectdreams.butterscotch.android.layouts.LayoutLibrary
 import net.perfectdreams.butterscotch.android.library.GameLibrary
+import java.util.UUID
 
 /**
  * The entry point of the app!
@@ -39,7 +40,7 @@ fun ButterscotchApp(gameLibrary: GameLibrary, layoutLibrary: LayoutLibrary) {
             val args = backStackEntry.toRoute<Route.GameSettings>()
             SettingsScreen(
                 library = gameLibrary,
-                gameId = args.gameId,
+                gameId = UUID.fromString(args.gameId),
                 nav = nav
             )
         }
@@ -48,7 +49,7 @@ fun ButterscotchApp(gameLibrary: GameLibrary, layoutLibrary: LayoutLibrary) {
             GameMetadataScreen(
                 gameLibrary = gameLibrary,
                 layoutLibrary = layoutLibrary,
-                gameId = args.gameId,
+                gameId = UUID.fromString(args.gameId),
                 nav = nav,
             )
         }
@@ -56,7 +57,7 @@ fun ButterscotchApp(gameLibrary: GameLibrary, layoutLibrary: LayoutLibrary) {
             val args = backStackEntry.toRoute<Route.SaveSlotList>()
             SaveSlotListScreen(
                 library = gameLibrary,
-                gameId = args.gameId,
+                gameId = UUID.fromString(args.gameId),
                 nav = nav,
             )
         }
@@ -64,7 +65,7 @@ fun ButterscotchApp(gameLibrary: GameLibrary, layoutLibrary: LayoutLibrary) {
             val args = backStackEntry.toRoute<Route.SaveSlotDetail>()
             SaveSlotDetailScreen(
                 library = gameLibrary,
-                gameId = args.gameId,
+                gameId = UUID.fromString(args.gameId),
                 slotId = args.slotId,
                 nav = nav,
             )

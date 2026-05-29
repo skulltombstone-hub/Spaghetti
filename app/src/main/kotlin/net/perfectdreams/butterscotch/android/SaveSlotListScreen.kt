@@ -94,7 +94,7 @@ fun SaveSlotListScreen(
                     SaveSlotTile(
                         slot = slot,
                         onOpen = {
-                            nav.navigate(Route.SaveSlotDetail(gameId, slot.id.toString()))
+                            nav.navigate(Route.SaveSlotDetail(gameId.toString(), slot.id.toString()))
                         },
                     )
                 }

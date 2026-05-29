@@ -28,6 +28,7 @@ import net.perfectdreams.butterscotch.android.components.ButterscotchTopBar
 import net.perfectdreams.butterscotch.android.components.MetadataForm
 import net.perfectdreams.butterscotch.android.layouts.GamepadLayout
 import net.perfectdreams.butterscotch.android.layouts.LayoutLibrary
+import net.perfectdreams.butterscotch.android.library.GameEntry
 import net.perfectdreams.butterscotch.android.library.GameLibrary
 import net.perfectdreams.butterscotch.android.pe.scanIconCandidates
 import java.util.UUID
@@ -58,11 +59,13 @@ fun GameMetadataScreen(
     // Save button instead of persisting silently behind the user's back.
     var portraitLayout by rememberSaveable { mutableStateOf(entry.portraitLayout) }
     var landscapeLayout by rememberSaveable { mutableStateOf(entry.landscapeLayout) }
+    var runnerOs by rememberSaveable { mutableStateOf(entry.runnerOs) }
 
     val titleTrimmed = title.trim()
     val titleChanged = titleTrimmed.isNotBlank() && titleTrimmed != entry.title
     val iconChanged = selectedIcon !== originalIcon
     val layoutsChanged = portraitLayout != entry.portraitLayout || landscapeLayout != entry.landscapeLayout
+    val runnerOsChanged = runnerOs != entry.runnerOs
 
     Scaffold(
         topBar = {
@@ -90,13 +93,19 @@ fun GameMetadataScreen(
                         onSelect = { id -> landscapeLayout = id },
                     )
                     Spacer(Modifier.height(16.dp))
+                    OsDropdown(
+                        selected = runnerOs,
+                        onSelect = { runnerOs = it },
+                    )
+                    Spacer(Modifier.height(16.dp))
                 },
                 loadCandidates = { scanIconCandidates(gameLibrary.bundleDir(entry)) },
-                saveEnabled = titleChanged || iconChanged || layoutsChanged,
+                saveEnabled = titleChanged || iconChanged || layoutsChanged || runnerOsChanged,
                 onSave = {
                     if (titleChanged) gameLibrary.setTitle(entry.id, titleTrimmed)
                     if (iconChanged) gameLibrary.setIcon(entry.id, selectedIcon)
                     if (layoutsChanged) gameLibrary.update(entry.id) { it.copy(portraitLayout = portraitLayout, landscapeLayout = landscapeLayout) }
+                    if (runnerOsChanged) gameLibrary.update(entry.id) { it.copy(runnerOs = runnerOs) }
                     nav.popBackStack()
                 },
             )
@@ -136,6 +145,43 @@ private fun LayoutDropdown(
                     text = { Text(layout.fancyName) },
                     onClick = {
                         onSelect(layout.id)
+                        expanded = false
+                    },
+                )
+            }
+        }
+    }
+}
+
+// Picks which OS the runner reports to the game through GML's os_type / os_* builtins. Staged and
+// committed on Save just like the layout dropdowns. Most games never read os_type, but chapter-aware
+// or platform-gated titles can branch on it.
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun OsDropdown(
+    selected: GameEntry.RunnerOs,
+    onSelect: (GameEntry.RunnerOs) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        OutlinedTextField(
+            value = selected.fancyName,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Reported OS") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable).fillMaxWidth(),
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            GameEntry.RunnerOs.entries.forEach { os ->
+                DropdownMenuItem(
+                    text = { Text(os.fancyName) },
+                    onClick = {
+                        onSelect(os)
                         expanded = false
                     },
                 )

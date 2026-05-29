@@ -93,7 +93,7 @@ class GameActivity : ComponentActivity() {
         // exit would otherwise immediately finish() us via the LaunchedEffect below.
         ButterscotchNative.resetExitLatch()
 
-        val butterscotchRunner = ButterscotchDroidRunner(wadFile.absolutePath, savesDir.absolutePath)
+        val butterscotchRunner = ButterscotchDroidRunner(wadFile.absolutePath, savesDir.absolutePath, entry.runnerOs.nativeValue)
         this.butterscotchRunner = butterscotchRunner
 
         setContent {
