@@ -113,7 +113,20 @@ class GameActivity : ComponentActivity() {
             // into the runner with no Composable left to release them.
             val keys = remember { VirtualKeyState(butterscotchRunner) }
 
+            var menuOpen by remember { mutableStateOf(false) }
             var editMode by remember { mutableStateOf(false) }
+
+            val isPaused = editMode || menuOpen
+
+            LaunchedEffect(isPaused) {
+                if (!isPaused) {
+                    // When we stop being paused, we release all keys
+                    keys.releaseAll()
+                }
+
+                butterscotchRunner.paused.value = isPaused
+            }
+
             // Toggling edit mode drops any held keys so a press in flight does not stick.
             LaunchedEffect(editMode) { keys.releaseAll() }
 
@@ -242,12 +255,16 @@ class GameActivity : ComponentActivity() {
                 }
 
                 MenuOverlay(
+                    butterscotchRunner,
+                    menuOpen,
+                    onMenuToggle = {
+                        menuOpen = it
+                    },
                     onExitGame = {
                         // This is blocking
                         butterscotchRunner.requestExit()
                     },
-                    releaseAllKeys = { keys.releaseAll() },
-                    onEditLayout = { editMode = true }
+                    onEditLayout = { editMode = true },
                 )
             }
         }

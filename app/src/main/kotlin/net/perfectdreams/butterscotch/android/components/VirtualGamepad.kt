@@ -196,28 +196,24 @@ private fun BoxWithConstraintsScope.PlayableGamepad(layout: GamepadLayout, keys:
  */
 @Composable
 fun MenuOverlay(
+    runner: ButterscotchDroidRunner,
+    menuOpen: Boolean,
+    onMenuToggle: (Boolean) -> Unit,
     onExitGame: () -> Unit,
-    releaseAllKeys: () -> Unit,
     onEditLayout: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var menuOpen by remember { mutableStateOf(false) }
-
-    LaunchedEffect(menuOpen) {
-        if (menuOpen) releaseAllKeys()
-    }
-
     // Back button: if the menu is open, close it. Otherwise open it. Same toggle the hamburger does.
     // Setting enabled=true unconditionally means we always intercept back - the alternative ("when
     // menu closed, let back fall through to default activity finish") would silently exit the game
     // without teardown. Always-route-through-menu keeps the exit path clean.
     BackHandler(enabled = true) {
-        menuOpen = !menuOpen
+        onMenuToggle.invoke(!menuOpen)
     }
 
     Box(modifier.fillMaxSize()) {
         MenuButton(
-            onClick = { menuOpen = true },
+            onClick = { onMenuToggle.invoke(true) },
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(16.dp)
@@ -225,7 +221,7 @@ fun MenuOverlay(
         // MenuSidebar is a BoxScope extension so it can align the panel to the right edge.
         MenuSidebar(
             open = menuOpen,
-            onDismiss = { menuOpen = false },
+            onDismiss = { onMenuToggle.invoke(false) },
             onExitGame = onExitGame,
             onEditLayout = onEditLayout
         )

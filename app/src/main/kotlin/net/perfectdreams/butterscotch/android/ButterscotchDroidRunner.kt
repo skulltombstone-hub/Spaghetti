@@ -9,6 +9,8 @@ import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -30,6 +32,7 @@ class ButterscotchDroidRunner(val dataWinPath: String, val savesPath: String, va
     private var renderJob: Job? = null
     private var runnerStarted = false
     private var started = false
+    var paused = MutableStateFlow(false)
     private val inputChannel = Channel<InputEvent>(capacity = 256, onBufferOverflow = BufferOverflow.DROP_OLDEST,)
     val gamepadRouter = GamepadRouter(this)
 
@@ -59,6 +62,12 @@ class ButterscotchDroidRunner(val dataWinPath: String, val savesPath: String, va
                 // Don't worry about the egl.hasSurface check, if the surface dies, the finally block will be executed and (hopefully) a new surface will be created,
                 // starting a whole new render loop :3
                 while (isActive && egl.hasSurface) {
+                    if (this@ButterscotchDroidRunner.paused.value) {
+                        this@ButterscotchDroidRunner.paused.first { !it } // Wait until we are NOT paused
+                        // Now we set the lastFrameNs to avoid catching up
+                        lastFrameNs = System.nanoTime()
+                    }
+
                     val frameStartNs = System.nanoTime()
                     val audioDt = ((frameStartNs - lastFrameNs) / 1_000_000_000.0)
                         .coerceIn(0.0, 0.1)
