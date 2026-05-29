@@ -17,7 +17,7 @@ import kotlinx.coroutines.yield
 import java.util.concurrent.Executors
 
 // The Butterscotch Android API is actually "global bound", but we use a class to help managing things here (and will be useful if we refactor down the road)
-class ButterscotchDroidRunner(val dataWinPath: String, val savesPath: String, val osType: Int) {
+class ButterscotchDroidRunner(val dataWinPath: String, val savesPath: String, val osType: Int, val enablePhysicalControllers: Boolean) {
     companion object {
         private const val TAG = "ButterscotchRenderLoop"
 
@@ -31,6 +31,7 @@ class ButterscotchDroidRunner(val dataWinPath: String, val savesPath: String, va
     private var runnerStarted = false
     private var started = false
     private val inputChannel = Channel<InputEvent>(capacity = 256, onBufferOverflow = BufferOverflow.DROP_OLDEST,)
+    val gamepadRouter = GamepadRouter(this)
 
     fun startRenderLoop(surface: Surface) {
         require(renderJob == null) { "Trying to start a renderJob while one is already active! Bug?" }

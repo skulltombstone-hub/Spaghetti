@@ -5,6 +5,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.text.Layout
 import android.util.Log
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -35,7 +36,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.viewinterop.AndroidView
 import net.perfectdreams.butterscotch.android.components.GameControls
 import net.perfectdreams.butterscotch.android.components.MenuOverlay
+import net.perfectdreams.butterscotch.android.gamepads.ButterscotchInputDeviceListener
 import net.perfectdreams.butterscotch.android.layouts.LayoutLibrary
+import net.perfectdreams.butterscotch.android.library.GameLibrary
 import java.util.UUID
 
 /**
@@ -53,19 +56,14 @@ import java.util.UUID
  */
 class GameActivity : ComponentActivity() {
     var butterscotchRunner: ButterscotchDroidRunner? = null
-
-    // Physical-controller plumbing. Both stay null when the game has physical controllers disabled,
-    // which makes the dispatch overrides fall straight through to super. The router lives for the
-    // activity's lifetime; the InputManager listener is (un)registered around onResume/onPause so we
-    // don't hold it (or held buttons) while backgrounded.
-    private var gamepadRouter: GamepadRouter? = null
-    private var inputDeviceListener: InputManager.InputDeviceListener? = null
+    lateinit var gameLibrary: GameLibrary
+    lateinit var layoutLibrary: LayoutLibrary
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val gameLibrary = Libraries.loadGameLibrary(this.applicationContext)
-        val layoutLibrary = Libraries.loadLayoutLibrary(this.applicationContext)
+        gameLibrary = Libraries.loadGameLibrary(this.applicationContext)
+        layoutLibrary = Libraries.loadLayoutLibrary(this.applicationContext)
 
         // Keep the screen on while the game runs - matches the GLFW build's default behavior.
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -105,20 +103,8 @@ class GameActivity : ComponentActivity() {
         // exit would otherwise immediately finish() us via the LaunchedEffect below.
         ButterscotchNative.resetExitLatch()
 
-        val butterscotchRunner = ButterscotchDroidRunner(wadFile.absolutePath, savesDir.absolutePath, entry.runnerOs.nativeValue)
+        val butterscotchRunner = ButterscotchDroidRunner(wadFile.absolutePath, savesDir.absolutePath, entry.runnerOs.nativeValue,  entry.enablePhysicalControllers)
         this.butterscotchRunner = butterscotchRunner
-
-        // Wire physical controllers into the native gamepad feed when this game opts in. The listener
-        // is registered later in onResume; here we just build the router + its callbacks.
-        if (entry.enablePhysicalControllers) {
-            val router = GamepadRouter(butterscotchRunner)
-            gamepadRouter = router
-            inputDeviceListener = object : InputManager.InputDeviceListener {
-                override fun onInputDeviceAdded(deviceId: Int) = router.onDeviceAdded(deviceId)
-                override fun onInputDeviceRemoved(deviceId: Int) = router.onDeviceRemoved(deviceId)
-                override fun onInputDeviceChanged(deviceId: Int) = router.onDeviceChanged(deviceId)
-            }
-        }
 
         setContent {
             // VirtualKeyState lives here (not inside the gamepad) so we can release-all on layout
@@ -268,35 +254,45 @@ class GameActivity : ComponentActivity() {
     }
 
     override fun onResume() {
+        // onResume is called AFTER onCreate (actually it is after onStart, but shhh you get what I'm saying)
         super.onResume()
-        val router = gamepadRouter ?: return
-        val listener = inputDeviceListener ?: return
-        getSystemService(InputManager::class.java)?.registerInputDeviceListener(listener, Handler(Looper.getMainLooper()))
-        // Pick up controllers that are already attached (and re-attach any that arrived while paused).
-        router.refresh()
+        val runner = this.butterscotchRunner ?: return
+
+        if (runner.enablePhysicalControllers) {
+            getSystemService(InputManager::class.java)?.registerInputDeviceListener(runner.gamepadRouter.listener, Handler(Looper.getMainLooper()))
+            // Pick up controllers that are already attached (and re-attach any that arrived while paused)
+            runner.gamepadRouter.refresh()
+        }
     }
 
     override fun onPause() {
-        val router = gamepadRouter
-        val listener = inputDeviceListener
-        if (router != null && listener != null) {
-            getSystemService(InputManager::class.java)?.unregisterInputDeviceListener(listener)
-            // Drop every controller so nothing is left held down while we're backgrounded.
-            router.releaseAll()
-        }
         super.onPause()
+        val runner = this.butterscotchRunner ?: return
+
+        if (runner.enablePhysicalControllers) {
+            getSystemService(InputManager::class.java)?.unregisterInputDeviceListener(runner.gamepadRouter.listener)
+            // Drop every controller so nothing is left held down while we're backgrounded
+            runner.gamepadRouter.releaseAll()
+        }
     }
 
-    // Route physical controller input before it reaches the Compose tree. Gamepad KeyEvents and
-    // joystick MotionEvents that belong to a managed controller are consumed here; everything else
-    // (touch, volume keys, back, a real keyboard) falls through to normal dispatch.
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (gamepadRouter?.handleKeyEvent(event) == true) return true
+        val runner = this.butterscotchRunner ?: return false
+
+        // We return true here so that gamepad keypresses don't bubble up to Compose
+        if (runner.enablePhysicalControllers && runner.gamepadRouter.handleKeyEvent(event))
+            return true
+
         return super.dispatchKeyEvent(event)
     }
 
     override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
-        if (gamepadRouter?.handleMotionEvent(event) == true) return true
+        val runner = this.butterscotchRunner ?: return false
+
+        // We return true here so that gamepad keypresses don't bubble up to Compose
+        if (runner.enablePhysicalControllers && runner.gamepadRouter.handleMotionEvent(event))
+            return true
+
         return super.dispatchGenericMotionEvent(event)
     }
 

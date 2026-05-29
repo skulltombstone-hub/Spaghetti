@@ -3,6 +3,7 @@ package net.perfectdreams.butterscotch.android
 import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
+import net.perfectdreams.butterscotch.android.gamepads.ButterscotchInputDeviceListener
 import net.perfectdreams.butterscotch.android.layouts.Gamepad
 
 // Translates Android physical-controller input into the runner's canonical RunnerGamepad feed.
@@ -21,6 +22,7 @@ class GamepadRouter(private val runner: ButterscotchDroidRunner) {
     private val deviceToSlot = HashMap<Int, Int>()
     private val slotInUse = BooleanArray(MAX_GAMEPADS)
     private val padStates = arrayOfNulls<PadState>(MAX_GAMEPADS)
+    val listener = ButterscotchInputDeviceListener(this)
 
     // Per-slot edge/dedup state. Sticks dedup so a single MotionEvent (which carries every axis)
     // doesn't re-send the axes that didn't move; hat + triggers are turned into digital button
