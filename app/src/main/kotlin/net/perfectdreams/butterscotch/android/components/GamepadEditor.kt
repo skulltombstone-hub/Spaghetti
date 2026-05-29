@@ -43,6 +43,8 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import net.perfectdreams.butterscotch.android.layouts.Gamepad
+import net.perfectdreams.butterscotch.android.layouts.Gamepad.Button
 import net.perfectdreams.butterscotch.android.layouts.GamepadElement
 import net.perfectdreams.butterscotch.android.layouts.GamepadLayout
 import net.perfectdreams.butterscotch.android.layouts.GamepadStick
@@ -180,6 +182,31 @@ fun BoxWithConstraintsScope.GamepadEditor(
                             id = UUID.randomUUID()
                         ))
                     })
+                    DropdownMenuItem(text = { Text("Gamepad Button") }, onClick = {
+                        addMenuExpanded = false
+                        add(GamepadElement.Key(
+                            positionX = 0.5,
+                            positionY = 0.5,
+                            scale = 0.22,
+                            opacity = 1.0,
+                            label = null,
+                            trigger = KeyTrigger.Press,
+                            binding = InputBinding.GamepadButton(device = 0, button = Gamepad.Button.FACE1.index),
+                            id = UUID.randomUUID()
+                        ))
+                    })
+                    DropdownMenuItem(text = { Text("Gamepad Joystick") }, onClick = {
+                        addMenuExpanded = false
+                        add(GamepadElement.AnalogJoystick(
+                            positionX = 0.5,
+                            positionY = 0.5,
+                            scale = 0.42,
+                            opacity = 1.0,
+                            stick = GamepadStick.LEFT,
+                            device = 0,
+                            id = UUID.randomUUID()
+                        ))
+                    })
                 }
             }
             Spacer(Modifier.height(8.dp))
@@ -276,7 +303,9 @@ private fun ElementEditDialog(
                 )
                 Spacer(Modifier.height(8.dp))
                 when (element) {
-                    is GamepadElement.Key -> VkField("Key", element.binding) { onChange(element.copy(binding = it)) }
+                    // The binding type is fixed at creation ("Button" -> keyboard, "Gamepad Button" ->
+                    // gamepad); BindingEditor shows the matching picker for whichever it currently is.
+                    is GamepadElement.Key -> BindingEditor("Button", element.binding) { onChange(element.copy(binding = it)) }
                     is GamepadElement.Joystick -> {
                         VkField("Up", element.up) { onChange(element.copy(up = it)) }
                         VkField("Down", element.down) { onChange(element.copy(down = it)) }
@@ -284,6 +313,7 @@ private fun ElementEditDialog(
                         VkField("Right", element.right) { onChange(element.copy(right = it)) }
                     }
                     is GamepadElement.AnalogJoystick -> {
+                        SlotField(element.device) { onChange(element.copy(device = it)) }
                         TextButton(onClick = { onChange(element.copy(stick = GamepadStick.LEFT)) }) {
                             Text("Left stick" + if (element.stick == GamepadStick.LEFT) " ✓" else "")
                         }
@@ -350,6 +380,91 @@ private fun VkField(label: String, binding: InputBinding, onChange: (InputBindin
                     text = { Text(gmlKey.label) },
                     onClick = {
                         onChange(InputBinding.Keyboard(gmlKey.code))
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+private const val VIRTUAL_SLOT_COUNT = 16
+
+// Picker for a Key's binding. The binding's concrete type is fixed when the element is added, so we
+// just render the matching editor: a keyboard key picker, or a controller slot + gamepad button pair.
+@Composable
+private fun BindingEditor(label: String, binding: InputBinding, onChange: (InputBinding) -> Unit) {
+    when (binding) {
+        is InputBinding.Keyboard -> VkField(label, binding, onChange)
+        is InputBinding.GamepadButton -> {
+            SlotField(binding.device) { onChange(binding.copy(device = it)) }
+            GamepadButtonField(binding.button) { onChange(binding.copy(button = it)) }
+        }
+    }
+}
+
+// Picks which controller slot (player) a gamepad element feeds.
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SlotField(device: Int, onChange: (Int) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    fun labelFor(slot: Int) = "Player ${slot + 1} (slot $slot)"
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+    ) {
+        OutlinedTextField(
+            value = labelFor(device),
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Controller slot") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                .fillMaxWidth()
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            for (slot in 0 until VIRTUAL_SLOT_COUNT) {
+                DropdownMenuItem(
+                    text = { Text(labelFor(slot)) },
+                    onClick = {
+                        onChange(slot)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+// Picks which gamepad button a "Gamepad Button" element sends. Stores the canonical button index.
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun GamepadButtonField(button: Int, onChange: (Int) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    val current = Gamepad.Button.fromIndex(button)
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+    ) {
+        OutlinedTextField(
+            value = current?.label ?: button.toString(),
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Button") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                .fillMaxWidth()
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            Gamepad.Button.entries.forEach { gpButton ->
+                DropdownMenuItem(
+                    text = { Text(gpButton.label) },
+                    onClick = {
+                        onChange(gpButton.index)
                         expanded = false
                     }
                 )

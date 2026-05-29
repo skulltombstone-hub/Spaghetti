@@ -74,6 +74,7 @@ import java.util.UUID
 import kotlin.math.atan2
 import kotlin.math.min
 import kotlin.math.sqrt
+import net.perfectdreams.butterscotch.android.layouts.Gamepad
 import net.perfectdreams.butterscotch.android.layouts.GamepadElement
 import net.perfectdreams.butterscotch.android.layouts.GamepadLayout
 import net.perfectdreams.butterscotch.android.layouts.GamepadStick
@@ -148,7 +149,7 @@ fun defaultLabelFor(binding: InputBinding): String = when (binding) {
         GmlKey.SPACE.code -> "␣"
         else -> binding.vk.toString()
     }
-    is InputBinding.GamepadButton -> "B${binding.button}"
+    is InputBinding.GamepadButton -> Gamepad.Button.fromIndex(binding.button)?.shortLabel ?: "B${binding.button}"
 }
 
 // The playable controls: each element renders as its interactive composable, dispatching input
@@ -173,9 +174,12 @@ private fun BoxWithConstraintsScope.PlayableGamepad(layout: GamepadLayout, keys:
                 keys = keys,
                 modifier = placement
             )
-            // Analog sticks need a continuous gamepad-axis transport that does not exist yet,
-            // so they are not rendered. The default layout contains none.
-            is GamepadElement.AnalogJoystick -> {}
+            is GamepadElement.AnalogJoystick -> AnalogJoystick(
+                stick = element.stick,
+                device = element.device,
+                keys = keys,
+                modifier = placement
+            )
         }
     }
 }
@@ -442,6 +446,90 @@ private fun Joystick(
                     }
                     // Pointer released or cancelled - drop all keys this joystick was holding.
                     keys.transition(currentKeys, emptySet())
+                    thumbOffset = Offset.Zero
+                }
+            }
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val radius = size.minDimension / 2f
+            val center = Offset(size.width / 2f, size.height / 2f)
+            // Outer ring
+            drawCircle(
+                color = Color.White.copy(alpha = 0.35f),
+                radius = radius * 0.95f,
+                center = center,
+                style = Stroke(width = 4f)
+            )
+            // Thumb
+            drawCircle(
+                color = Color.White.copy(alpha = 0.6f),
+                radius = radius * 0.40f,
+                center = center + thumbOffset
+            )
+        }
+    }
+}
+
+// ===[ Analog Joystick ]===
+
+/**
+ * On-screen *analog* stick: unlike the digital [Joystick] (which snaps the finger angle to 4 arrow
+ * keys), this reports the thumb's continuous position as two raw axis values in [-1, 1] straight to
+ * the runner's gamepad feed (which deadzones on read). Pushing up is negative V, left is negative H,
+ * matching GameMaker's gp_axis* convention and the physical-controller mapping.
+ *
+ * The thumb (and the reported magnitude) is clamped to the base radius so neither axis exceeds 1.0.
+ * On release it re-centers to (0, 0). [VirtualKeyState.setAxis] also re-centers it if this composable
+ * is torn down mid-drag (e.g. an Overlay/Stacked reflow).
+ */
+@Composable
+private fun AnalogJoystick(
+    stick: GamepadStick,
+    device: Int,
+    keys: VirtualKeyState,
+    modifier: Modifier = Modifier
+) {
+    var thumbOffset by remember { mutableStateOf(Offset.Zero) }
+
+    Box(
+        modifier = modifier
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = 0.18f))
+            .pointerInput(stick, device) {
+                awaitEachGesture {
+                    val downPointer = awaitFirstDown(requireUnconsumed = false)
+                    downPointer.consume()
+                    val center = Offset(size.width / 2f, size.height / 2f)
+                    val radiusPx = min(size.width, size.height) / 2f
+
+                    fun update(position: Offset) {
+                        val delta = position - center
+                        val dist = sqrt(delta.x * delta.x + delta.y * delta.y)
+                        // Clamp to the base radius so the normalized value never exceeds 1.0.
+                        val clamped = if (dist > radiusPx) delta * (radiusPx / dist) else delta
+                        thumbOffset = clamped
+                        val x = if (radiusPx > 0f) (clamped.x / radiusPx).coerceIn(-1f, 1f) else 0f
+                        val y = if (radiusPx > 0f) (clamped.y / radiusPx).coerceIn(-1f, 1f) else 0f
+                        keys.setAxis(device, stick.horizontalAxisIndex, x)
+                        keys.setAxis(device, stick.verticalAxisIndex, y)
+                    }
+
+                    update(downPointer.position)
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Main)
+                        val change = event.changes.firstOrNull { it.id == downPointer.id } ?: break
+                        if (!change.pressed) {
+                            change.consume()
+                            break
+                        }
+                        if (change.positionChanged()) {
+                            change.consume()
+                            update(change.position)
+                        }
+                    }
+                    // Pointer released or cancelled - re-center the stick.
+                    keys.setAxis(device, stick.horizontalAxisIndex, 0f)
+                    keys.setAxis(device, stick.verticalAxisIndex, 0f)
                     thumbOffset = Offset.Zero
                 }
             }

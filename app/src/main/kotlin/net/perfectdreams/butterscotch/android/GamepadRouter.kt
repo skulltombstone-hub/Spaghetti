@@ -3,6 +3,7 @@ package net.perfectdreams.butterscotch.android
 import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
+import net.perfectdreams.butterscotch.android.layouts.Gamepad
 
 // Translates Android physical-controller input into the runner's canonical RunnerGamepad feed.
 //
@@ -134,14 +135,14 @@ class GamepadRouter(private val runner: ButterscotchDroidRunner) {
         val newX = signOf(hatX)
         if (newX != state.lastHatX) {
             state.lastHatX = newX
-            runner.onGamepadButton(slot, BTN_DPAD_LEFT, newX < 0)
-            runner.onGamepadButton(slot, BTN_DPAD_RIGHT, newX > 0)
+            runner.onGamepadButton(slot, Gamepad.Button.DPAD_LEFT.index, newX < 0)
+            runner.onGamepadButton(slot, Gamepad.Button.DPAD_RIGHT.index, newX > 0)
         }
         val newY = signOf(hatY)
         if (newY != state.lastHatY) {
             state.lastHatY = newY
-            runner.onGamepadButton(slot, BTN_DPAD_UP, newY < 0)
-            runner.onGamepadButton(slot, BTN_DPAD_DOWN, newY > 0)
+            runner.onGamepadButton(slot, Gamepad.Button.DPAD_UP.index, newY < 0)
+            runner.onGamepadButton(slot, Gamepad.Button.DPAD_DOWN.index, newY > 0)
         }
     }
 
@@ -150,7 +151,7 @@ class GamepadRouter(private val runner: ButterscotchDroidRunner) {
         val last = if (isLeft) state.leftTriggerDown else state.rightTriggerDown
         if (pressed == last) return
         if (isLeft) state.leftTriggerDown = pressed else state.rightTriggerDown = pressed
-        runner.onGamepadButton(slot, if (isLeft) BTN_TRIGGER_L else BTN_TRIGGER_R, pressed)
+        runner.onGamepadButton(slot, if (isLeft) Gamepad.Button.TRIGGER_L.index else Gamepad.Button.TRIGGER_R.index, pressed)
     }
 
     companion object {
@@ -161,25 +162,6 @@ class GamepadRouter(private val runner: ButterscotchDroidRunner) {
         // Hat axes and trigger axes are continuous; treat them as digital past these thresholds.
         private const val HAT_THRESHOLD = 0.5f
         private const val TRIGGER_THRESHOLD = 0.5f
-
-        // Canonical RunnerGamepad slot indices (must match gmlButtonToIndex in runner_gamepad.c).
-        private const val BTN_FACE1 = 0      // A / cross (bottom)
-        private const val BTN_FACE2 = 1      // B / circle (right)
-        private const val BTN_FACE3 = 2      // X / square (left)
-        private const val BTN_FACE4 = 3      // Y / triangle (top)
-        private const val BTN_SHOULDER_L = 4 // L1
-        private const val BTN_SHOULDER_R = 5 // R1
-        private const val BTN_TRIGGER_L = 6  // L2
-        private const val BTN_TRIGGER_R = 7  // R2
-        private const val BTN_SELECT = 8
-        private const val BTN_START = 9
-        private const val BTN_STICK_L = 10
-        private const val BTN_STICK_R = 11
-        private const val BTN_DPAD_UP = 12
-        private const val BTN_DPAD_DOWN = 13
-        private const val BTN_DPAD_LEFT = 14
-        private const val BTN_DPAD_RIGHT = 15
-        private const val BTN_HOME = 16
 
         // Canonical axis indices.
         private const val AXIS_LH = 0
@@ -201,23 +183,23 @@ class GamepadRouter(private val runner: ButterscotchDroidRunner) {
 
         // Android KeyEvent keycode -> canonical button index, or -1 to leave the event alone.
         private fun keyCodeToButton(keyCode: Int): Int = when (keyCode) {
-            KeyEvent.KEYCODE_BUTTON_A -> BTN_FACE1
-            KeyEvent.KEYCODE_BUTTON_B -> BTN_FACE2
-            KeyEvent.KEYCODE_BUTTON_X -> BTN_FACE3
-            KeyEvent.KEYCODE_BUTTON_Y -> BTN_FACE4
-            KeyEvent.KEYCODE_BUTTON_L1 -> BTN_SHOULDER_L
-            KeyEvent.KEYCODE_BUTTON_R1 -> BTN_SHOULDER_R
-            KeyEvent.KEYCODE_BUTTON_L2 -> BTN_TRIGGER_L
-            KeyEvent.KEYCODE_BUTTON_R2 -> BTN_TRIGGER_R
-            KeyEvent.KEYCODE_BUTTON_SELECT -> BTN_SELECT
-            KeyEvent.KEYCODE_BUTTON_START -> BTN_START
-            KeyEvent.KEYCODE_BUTTON_THUMBL -> BTN_STICK_L
-            KeyEvent.KEYCODE_BUTTON_THUMBR -> BTN_STICK_R
-            KeyEvent.KEYCODE_DPAD_UP -> BTN_DPAD_UP
-            KeyEvent.KEYCODE_DPAD_DOWN -> BTN_DPAD_DOWN
-            KeyEvent.KEYCODE_DPAD_LEFT -> BTN_DPAD_LEFT
-            KeyEvent.KEYCODE_DPAD_RIGHT -> BTN_DPAD_RIGHT
-            KeyEvent.KEYCODE_BUTTON_MODE -> BTN_HOME
+            KeyEvent.KEYCODE_BUTTON_A -> Gamepad.Button.FACE1.index
+            KeyEvent.KEYCODE_BUTTON_B -> Gamepad.Button.FACE2.index
+            KeyEvent.KEYCODE_BUTTON_X -> Gamepad.Button.FACE3.index
+            KeyEvent.KEYCODE_BUTTON_Y -> Gamepad.Button.FACE4.index
+            KeyEvent.KEYCODE_BUTTON_L1 -> Gamepad.Button.SHOULDER_L.index
+            KeyEvent.KEYCODE_BUTTON_R1 -> Gamepad.Button.SHOULDER_R.index
+            KeyEvent.KEYCODE_BUTTON_L2 -> Gamepad.Button.TRIGGER_L.index
+            KeyEvent.KEYCODE_BUTTON_R2 -> Gamepad.Button.TRIGGER_R.index
+            KeyEvent.KEYCODE_BUTTON_SELECT -> Gamepad.Button.SELECT.index
+            KeyEvent.KEYCODE_BUTTON_START -> Gamepad.Button.START.index
+            KeyEvent.KEYCODE_BUTTON_THUMBL -> Gamepad.Button.STICK_L.index
+            KeyEvent.KEYCODE_BUTTON_THUMBR -> Gamepad.Button.STICK_R.index
+            KeyEvent.KEYCODE_DPAD_UP -> Gamepad.Button.DPAD_UP.index
+            KeyEvent.KEYCODE_DPAD_DOWN -> Gamepad.Button.DPAD_DOWN.index
+            KeyEvent.KEYCODE_DPAD_LEFT -> Gamepad.Button.DPAD_LEFT.index
+            KeyEvent.KEYCODE_DPAD_RIGHT -> Gamepad.Button.DPAD_RIGHT.index
+            KeyEvent.KEYCODE_BUTTON_MODE -> Gamepad.Button.HOME.index
             else -> -1
         }
     }
