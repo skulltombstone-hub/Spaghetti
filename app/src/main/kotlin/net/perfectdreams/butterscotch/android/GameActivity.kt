@@ -233,10 +233,7 @@ class GameActivity : ComponentActivity() {
 
                 MenuOverlay(
                     onExitGame = {
-                        // Non-blocking: request exit. The render thread winds down on its own,
-                        // marks ButterscotchNative.hasExited, and the LaunchedEffect above sees the
-                        // change and calls finish(). onDestroy then joins via stopAndJoin.
-                        // Doing the blocking join here directly would prevent recomposition.
+                        // This is blocking
                         butterscotchRunner.requestExit()
                     },
                     releaseAllKeys = { keys.releaseAll() },
