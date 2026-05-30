@@ -36,6 +36,7 @@ import net.perfectdreams.butterscotch.android.layouts.GamepadElement
 import net.perfectdreams.butterscotch.android.layouts.GamepadStick
 import net.perfectdreams.butterscotch.android.layouts.InputBinding
 import net.perfectdreams.butterscotch.android.layouts.KeyTrigger
+import net.perfectdreams.butterscotch.android.theme.ButterscotchPrimary
 import kotlin.math.atan2
 import kotlin.math.min
 import kotlin.math.sqrt
@@ -187,29 +188,31 @@ fun ActionButton(
 @Composable
 fun JoystickBase(
     modifier: Modifier = Modifier,
-    modifierWithOffset: Modifier.(thumbOffset: MutableState<Offset>) -> Modifier
+    modifierWithOffset: Modifier.(holdingState: MutableState<Boolean>, thumbOffset: MutableState<Offset>) -> Modifier
 ) {
     val thumbOffset = remember { mutableStateOf(Offset.Zero) }
+    val holding = remember { mutableStateOf(false) }
+    val color = if (holding.value) ButterscotchPrimary else Color.White
 
     Box(
         modifier = modifier
             .clip(CircleShape)
-            .background(Color.White.copy(alpha = 0.18f))
-            .modifierWithOffset(thumbOffset)
+            .background(color.copy(alpha = 0.18f))
+            .modifierWithOffset(holding, thumbOffset)
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val radius = size.minDimension / 2f
             val center = Offset(size.width / 2f, size.height / 2f)
             // Outer ring
             drawCircle(
-                color = Color.White.copy(alpha = 0.35f),
+                color = color.copy(alpha = 0.35f),
                 radius = radius * 0.95f,
                 center = center,
                 style = Stroke(width = 4f)
             )
             // Thumb
             drawCircle(
-                color = Color.White.copy(alpha = 0.6f),
+                color = color.copy(alpha = 0.6f),
                 radius = radius * 0.40f,
                 center = center + thumbOffset.value
             )
@@ -234,7 +237,7 @@ fun Joystick(
     interactive: Boolean,
     modifier: Modifier = Modifier
 ) {
-    JoystickBase(modifier) { thumbOffset ->
+    JoystickBase(modifier) { holding, thumbOffset ->
         this.pointerInput(up, down, left, right) {
             if (interactive) {
                 awaitEachGesture {
@@ -278,9 +281,11 @@ fun Joystick(
 
                     update(downPointer.position)
                     while (true) {
+                        holding.value = true
                         val event = awaitPointerEvent(PointerEventPass.Main)
                         val change = event.changes.firstOrNull { it.id == downPointer.id } ?: break
                         if (!change.pressed) {
+                            holding.value = false
                             change.consume()
                             break
                         }
@@ -318,7 +323,7 @@ fun AnalogJoystick(
     interactive: Boolean,
     modifier: Modifier = Modifier
 ) {
-    JoystickBase(modifier) { thumbOffset ->
+    JoystickBase(modifier) { holding, thumbOffset ->
         this.pointerInput(stick) {
             if (interactive) {
                 awaitEachGesture {
