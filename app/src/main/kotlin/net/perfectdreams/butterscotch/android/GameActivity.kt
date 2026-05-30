@@ -37,6 +37,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import net.perfectdreams.butterscotch.android.components.GameControls
 import net.perfectdreams.butterscotch.android.components.MenuOverlay
 import net.perfectdreams.butterscotch.android.gamepads.ButterscotchInputDeviceListener
+import net.perfectdreams.butterscotch.android.layouts.GamepadElement
 import net.perfectdreams.butterscotch.android.layouts.LayoutLibrary
 import net.perfectdreams.butterscotch.android.library.GameLibrary
 import java.util.UUID
@@ -115,6 +116,7 @@ class GameActivity : ComponentActivity() {
 
             var menuOpen by remember { mutableStateOf(false) }
             var editMode by remember { mutableStateOf(false) }
+            var fastForwardActiveButtonId by remember { mutableStateOf<UUID?>(null) }
 
             val isPaused = editMode || menuOpen
 
@@ -125,6 +127,8 @@ class GameActivity : ComponentActivity() {
                 }
 
                 butterscotchRunner.paused.value = isPaused
+                // We also reset the fast forward speed to avoid a fast forward button being deleted while it is still active
+                fastForwardActiveButtonId = null
             }
 
             // Toggling edit mode drops any held keys so a press in flight does not stick.
@@ -197,6 +201,8 @@ class GameActivity : ComponentActivity() {
                     Log.i(TAG, "Using $assignedId for the gamepad layout... The fallback ID is $fallbackId")
 
                     var layout by remember(isPortrait, assignedId) { mutableStateOf(layoutLibrary.findById(assignedId) ?: layoutLibrary.findById(fallbackId)!!) }
+
+
                     // Save only applies to user layouts; the built-in defaults are read-only.
                     val canSave = layout.id != LayoutLibrary.DEFAULT_PORTRAIT_LAYOUT && layout.id != LayoutLibrary.DEFAULT_LANDSCAPE_LAYOUT
                     val onSave = { layoutLibrary.upsert(layout) }
@@ -211,6 +217,22 @@ class GameActivity : ComponentActivity() {
                         layout = forked
                     }
 
+                    // We need to have this here because we NEED the current element
+                    LaunchedEffect(fastForwardActiveButtonId) {
+                        if (fastForwardActiveButtonId == null) {
+                            butterscotchRunner.fastForwardSpeed = 1.0f
+                        } else {
+                            val element = layout.element.firstOrNull { it.id == fastForwardActiveButtonId } as GamepadElement.FastForward?
+
+                            if (element != null) {
+                                butterscotchRunner.fastForwardSpeed = element.speed
+                            } else {
+                                // I doubt this can happen because we do set it to null when the menu is open/paused, but...
+                                fastForwardActiveButtonId = null
+                            }
+                        }
+                    }
+
                     when (layoutMode) {
                         LayoutMode.Overlay -> {
                             Box(Modifier.fillMaxSize()) {
@@ -218,6 +240,7 @@ class GameActivity : ComponentActivity() {
                                 GameControls(
                                     layout = layout,
                                     editMode = editMode,
+                                    activeFastForwardButtonId = fastForwardActiveButtonId,
                                     onLayoutChange = { layout = it },
                                     onExitEditMode = { editMode = false },
                                     canSave = canSave,
@@ -225,6 +248,12 @@ class GameActivity : ComponentActivity() {
                                     onSaveAs = onSaveAs,
                                     onMenuOpen = {
                                         menuOpen = true
+                                    },
+                                    onFastForward = {
+                                        if (fastForwardActiveButtonId == it.id)
+                                            fastForwardActiveButtonId = null
+                                        else
+                                            fastForwardActiveButtonId = it.id
                                     },
                                     keys = keys,
                                     modifier = Modifier.fillMaxSize()
@@ -241,6 +270,7 @@ class GameActivity : ComponentActivity() {
                                 GameControls(
                                     layout = layout,
                                     editMode = editMode,
+                                    activeFastForwardButtonId = fastForwardActiveButtonId,
                                     onLayoutChange = { layout = it },
                                     onExitEditMode = { editMode = false },
                                     canSave = canSave,
@@ -248,6 +278,12 @@ class GameActivity : ComponentActivity() {
                                     onSaveAs = onSaveAs,
                                     onMenuOpen = {
                                         menuOpen = true
+                                    },
+                                    onFastForward = {
+                                        if (fastForwardActiveButtonId == it.id)
+                                            fastForwardActiveButtonId = null
+                                        else
+                                            fastForwardActiveButtonId = it.id
                                     },
                                     keys = keys,
                                     modifier = Modifier

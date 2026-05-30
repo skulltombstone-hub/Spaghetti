@@ -35,6 +35,7 @@ class ButterscotchDroidRunner(val dataWinPath: String, val savesPath: String, va
     var paused = MutableStateFlow(false)
     private val inputChannel = Channel<InputEvent>(capacity = 256, onBufferOverflow = BufferOverflow.DROP_OLDEST,)
     val gamepadRouter = GamepadRouter(this)
+    var fastForwardSpeed = 1.0f
 
     fun startRenderLoop(surface: Surface) {
         require(renderJob == null) { "Trying to start a renderJob while one is already active! Bug?" }
@@ -83,7 +84,7 @@ class ButterscotchDroidRunner(val dataWinPath: String, val savesPath: String, va
                             if (stepStatus == ButterscotchNative.BUTTERSCOTCH_DROID_CONTINUE)
                                 egl.swapBuffers()
 
-                            val hz = ButterscotchNative.getTargetFrameHz()
+                            val hz = (ButterscotchNative.getTargetFrameHz() * this@ButterscotchDroidRunner.fastForwardSpeed).toLong()
                             if (hz > 0) {
                                 val targetNs = 1_000_000_000L / hz
                                 val nextDeadline = lastFrameNs + targetNs

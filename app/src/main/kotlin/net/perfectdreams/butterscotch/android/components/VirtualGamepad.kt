@@ -104,12 +104,14 @@ import kotlin.collections.iterator
 fun GameControls(
     layout: GamepadLayout,
     editMode: Boolean,
+    activeFastForwardButtonId: UUID?,
     onLayoutChange: (GamepadLayout) -> Unit,
     onExitEditMode: () -> Unit,
     canSave: Boolean,
     onSave: () -> Unit,
     onSaveAs: (String) -> Unit,
     onMenuOpen: () -> (Unit),
+    onFastForward: (GamepadElement.FastForward) -> (Unit),
     keys: VirtualKeyState,
     modifier: Modifier = Modifier
 ) {
@@ -125,7 +127,7 @@ fun GameControls(
                 onSaveAs = onSaveAs
             )
         } else {
-            PlayableGamepad(layout = layout, keys = keys) {
+            PlayableGamepad(layout = layout, keys = keys, activeFastForwardButtonId, onFastForward) {
                 onMenuOpen.invoke()
             }
         }
@@ -164,7 +166,7 @@ fun defaultLabelFor(binding: InputBinding): String = when (binding) {
 // The playable controls: each element renders as its interactive composable, dispatching input
 // through [keys]. No edit affordances here at all.
 @Composable
-private fun BoxWithConstraintsScope.PlayableGamepad(layout: GamepadLayout, keys: VirtualKeyState, onMenuOpen: () -> (Unit)) {
+private fun BoxWithConstraintsScope.PlayableGamepad(layout: GamepadLayout, keys: VirtualKeyState, activeFastForwardButtonId: UUID?, onFastForward: (GamepadElement.FastForward) -> (Unit), onMenuOpen: () -> (Unit)) {
     layout.element.forEach { element ->
         val placement = placementOf(element).alpha(element.opacity.toFloat())
         when (element) {
@@ -201,6 +203,16 @@ private fun BoxWithConstraintsScope.PlayableGamepad(layout: GamepadLayout, keys:
                     {
                         onMenuOpen.invoke()
                     },
+                    placement
+                )
+            }
+
+            is GamepadElement.FastForward -> {
+                FastForwardButton(
+                    activeFastForwardButtonId == element.id,
+                    true,
+                    element,
+                    onFastForward,
                     placement
                 )
             }

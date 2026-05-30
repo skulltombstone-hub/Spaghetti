@@ -27,6 +27,7 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RangeSlider
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -56,6 +57,7 @@ import net.perfectdreams.butterscotch.android.layouts.GmlKey
 import net.perfectdreams.butterscotch.android.layouts.InputBinding
 import net.perfectdreams.butterscotch.android.layouts.KeyTrigger
 import java.util.UUID
+import kotlin.math.absoluteValue
 
 // The editor: every element becomes a draggable / long-pressable stand-in, plus a toolbar (add /
 // save / save as) and the per-element + "save as" dialogs. Elements are addressed by their stable
@@ -168,6 +170,18 @@ fun BoxWithConstraintsScope.GamepadEditor(
             is GamepadElement.Menu -> {
                 MenuButton(false, {}, editModifier)
             }
+
+            is GamepadElement.FastForward -> {
+                FastForwardButton(
+                    false,
+                    false,
+                    element,
+                    {
+
+                    },
+                    editModifier
+                )
+            }
         }
     }
 
@@ -254,6 +268,18 @@ fun BoxWithConstraintsScope.GamepadEditor(
                             id = UUID.randomUUID()
                         ))
                     })
+                    DropdownMenuItem(text = { Text("Fast Forward") }, onClick = {
+                        addMenuExpanded = false
+                        add(GamepadElement.FastForward(
+                            positionX = 0.5,
+                            positionY = 0.5,
+                            scale = 0.22,
+                            opacity = 1.0,
+                            id = UUID.randomUUID(),
+                            speed = 2.0f,
+                            toggle = true
+                        ))
+                    })
                 }
             }
             Spacer(Modifier.height(8.dp))
@@ -314,6 +340,7 @@ private fun ElementEditDialog(
                     is GamepadElement.Joystick -> "Edit joystick"
                     is GamepadElement.AnalogJoystick -> "Edit analog stick"
                     is GamepadElement.Menu -> "Edit menu"
+                    is GamepadElement.FastForward -> "Edit fast forward"
                 }
             )
         },
@@ -358,6 +385,16 @@ private fun ElementEditDialog(
                     }
 
                     is GamepadElement.Menu -> {}
+                    is GamepadElement.FastForward -> {
+                        Slider(
+                            value = element.speed,
+                            onValueChange = {
+                                onChange(element.copy(speed = it.absoluteValue))
+                            },
+                            steps = 1,
+                            valueRange = 2f..8f
+                        )
+                    }
                 }
             }
         }
@@ -525,18 +562,21 @@ private fun GamepadElement.movedTo(px: Double, py: Double): GamepadElement = whe
     is GamepadElement.Joystick -> copy(positionX = px, positionY = py)
     is GamepadElement.AnalogJoystick -> copy(positionX = px, positionY = py)
     is GamepadElement.Menu -> copy(positionX = px, positionY = py)
+    is GamepadElement.FastForward -> copy(positionX = px, positionY = py)
 }
 private fun GamepadElement.withScale(s: Double): GamepadElement = when (this) {
     is GamepadElement.Key -> copy(scale = s)
     is GamepadElement.Joystick -> copy(scale = s)
     is GamepadElement.AnalogJoystick -> copy(scale = s)
     is GamepadElement.Menu -> copy(scale = s)
+    is GamepadElement.FastForward -> copy(scale = s)
 }
 private fun GamepadElement.withOpacity(o: Double): GamepadElement = when (this) {
     is GamepadElement.Key -> copy(opacity = o)
     is GamepadElement.Joystick -> copy(opacity = o)
     is GamepadElement.AnalogJoystick -> copy(opacity = o)
     is GamepadElement.Menu -> copy(opacity = o)
+    is GamepadElement.FastForward -> copy(opacity = o)
 }
 
 // Read the integer code behind a binding (keyboard vk or gamepad button number), used to find the

@@ -87,4 +87,17 @@ sealed class GamepadElement {
         override val scale: Double,
         override val opacity: Double,
     ) : GamepadElement()
+
+    @Serializable
+    @SerialName("FastForward")
+    data class FastForward(
+        @Serializable(with = UUIDAsStringSerializer::class)
+        override val id: UUID,
+        override val positionX: Double,
+        override val positionY: Double,
+        override val scale: Double,
+        override val opacity: Double,
+        val speed: Float,
+        val toggle: Boolean
+    ) : GamepadElement()
 }

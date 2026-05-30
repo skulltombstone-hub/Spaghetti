@@ -30,6 +30,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import net.perfectdreams.butterscotch.android.VirtualKeyState
+import net.perfectdreams.butterscotch.android.layouts.GamepadElement
 import net.perfectdreams.butterscotch.android.layouts.GamepadStick
 import net.perfectdreams.butterscotch.android.layouts.InputBinding
 import net.perfectdreams.butterscotch.android.layouts.KeyTrigger
@@ -61,6 +62,39 @@ fun MenuButton(
         Icon(
             imageVector = Icons.Default.Menu,
             contentDescription = "Open menu",
+            tint = Color.White,
+            // The Box is sized by placement (scale * shorter side), so size the glyph as a fraction of it
+            modifier = Modifier.fillMaxSize(0.55f)
+        )
+    }
+}
+
+@Composable
+fun FastForwardButton(
+    isActive: Boolean,
+    interactive: Boolean,
+    element: GamepadElement.FastForward,
+    onClick: (GamepadElement.FastForward) -> (Unit),
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .clip(CircleShape)
+            .background(if (isActive) Color.Yellow.copy(alpha = 0.22f) else Color.White.copy(alpha = 0.22f))
+            .pointerInput(Unit) {
+                if (interactive) {
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        down.consume()
+                        onClick.invoke(element)
+                    }
+                }
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = Icons.Default.Menu,
+            contentDescription = "Enable fast forward",
             tint = Color.White,
             // The Box is sized by placement (scale * shorter side), so size the glyph as a fraction of it
             modifier = Modifier.fillMaxSize(0.55f)
