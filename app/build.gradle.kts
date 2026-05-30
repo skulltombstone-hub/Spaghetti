@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "net.perfectdreams.butterscotch"
+    namespace = "net.perfectdreams.butterscotch.android"
     compileSdk {
         version = release(36) {
             minorApiLevel = 1

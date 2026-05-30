@@ -6,7 +6,7 @@ import android.graphics.BitmapFactory
 import androidx.core.content.pm.ShortcutInfoCompat
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.graphics.drawable.IconCompat
-import net.perfectdreams.butterscotch.R
+import net.perfectdreams.butterscotch.android.R
 import net.perfectdreams.butterscotch.android.GameActivity
 import net.perfectdreams.butterscotch.android.MainActivity
 import net.perfectdreams.butterscotch.android.library.GameEntry

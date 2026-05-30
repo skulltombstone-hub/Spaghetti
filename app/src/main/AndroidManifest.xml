@@ -12,7 +12,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.ButterscotchAndroid">
         <activity
-            android:name=".android.MainActivity"
+            android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.ButterscotchAndroid">
@@ -24,7 +24,7 @@
         </activity>
         <!-- configChanges: "I will handle the activity myself DO NOT TEAR IT DOWN PLEASE -->
         <activity
-            android:name=".android.GameActivity"
+            android:name=".GameActivity"
             android:exported="false"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode"
             android:theme="@style/Theme.ButterscotchAndroid" />
