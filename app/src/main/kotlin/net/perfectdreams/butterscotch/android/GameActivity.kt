@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.safeDrawingPadding
@@ -30,8 +31,10 @@ import androidx.compose.runtime.movableContentOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.viewinterop.AndroidView
 import net.perfectdreams.butterscotch.android.components.GameControls
 import net.perfectdreams.butterscotch.android.components.MenuOverlay
@@ -139,6 +142,8 @@ class GameActivity : ComponentActivity() {
                     finish()
             }
 
+            val targetOperatingSystemDisplaySize: IntSize? = entry.runnerOs.displayResolution
+
             // movableContentOf wraps the SurfaceView so re-parenting it between Overlay/Stacked
             // layouts doesn't destroy and recreate the View. The SurfaceView's underlying Android
             // Surface MAY still be recreated by the system (and that's fine — the native side
@@ -150,12 +155,19 @@ class GameActivity : ComponentActivity() {
                         modifier = modifier,
                         factory = { ctx ->
                             SurfaceView(ctx).apply {
+                                // setFixedSize requests the buffer resolution, the compositor scales it to the View.
+                                if (targetOperatingSystemDisplaySize != null) {
+                                    holder.setFixedSize(targetOperatingSystemDisplaySize.width, targetOperatingSystemDisplaySize.height)
+                                }
+
                                 holder.addCallback(object : SurfaceHolder.Callback {
                                     override fun surfaceCreated(holder: SurfaceHolder) {
                                         butterscotchRunner.startRenderLoop(holder.surface)
                                     }
 
-                                    override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {}
+                                    override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
+                                        butterscotchRunner.onSurfaceResized(width, height)
+                                    }
 
                                     override fun surfaceDestroyed(holder: SurfaceHolder) {
                                         butterscotchRunner.stopRenderLoop()
@@ -174,13 +186,16 @@ class GameActivity : ComponentActivity() {
             ) {
                 BoxWithConstraints(Modifier.fillMaxSize()) {
                     val gameSize = ButterscotchNative.currentGameSize
-                    val gameAspect = if (gameSize != null && gameSize.height > 0) {
+
+                    val contentAspect = if (targetOperatingSystemDisplaySize != null) {
+                        targetOperatingSystemDisplaySize.width.toFloat() / targetOperatingSystemDisplaySize.height.toFloat()
+                    } else if (gameSize != null && gameSize.height > 0) {
                         gameSize.width.toFloat() / gameSize.height.toFloat()
                     } else {
                         4f / 3f
                     }
                     val deviceAspect = constraints.maxWidth.toFloat() / constraints.maxHeight.toFloat()
-                    val layoutMode = pickLayoutMode(gameAspect, deviceAspect)
+                    val layoutMode = pickLayoutMode(contentAspect, deviceAspect)
 
                     LaunchedEffect(layoutMode) {
                         keys.releaseAll()
@@ -234,7 +249,14 @@ class GameActivity : ComponentActivity() {
                     when (layoutMode) {
                         LayoutMode.Overlay -> {
                             Box(Modifier.fillMaxSize()) {
-                                gameSurface(Modifier.fillMaxSize())
+                                val gameSurfaceModifier = if (targetOperatingSystemDisplaySize != null) {
+                                    (if (deviceAspect > contentAspect) Modifier.fillMaxHeight() else Modifier.fillMaxWidth())
+                                        .aspectRatio(contentAspect)
+                                        .align(Alignment.Center)
+                                } else {
+                                    Modifier.fillMaxSize()
+                                }
+                                gameSurface(gameSurfaceModifier)
                                 GameControls(
                                     layout = layout,
                                     editMode = editMode,
@@ -263,7 +285,7 @@ class GameActivity : ComponentActivity() {
                                 gameSurface(
                                     Modifier
                                         .fillMaxWidth()
-                                        .aspectRatio(gameAspect)
+                                        .aspectRatio(contentAspect)
                                 )
                                 GameControls(
                                     layout = layout,

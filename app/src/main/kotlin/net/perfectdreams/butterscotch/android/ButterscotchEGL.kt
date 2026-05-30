@@ -31,6 +31,14 @@ class ButterscotchEGL {
     val hasSurface
         get() = surface != EGL14.EGL_NO_SURFACE
 
+    /**
+     * Update the cached surface size after a [android.view.SurfaceHolder] size change (example: a `setFixedSize` taking effect, or a rotation).
+     */
+    fun updateSize(newWidth: Int, newHeight: Int) {
+        if (newWidth > 0) width = newWidth
+        if (newHeight > 0) height = newHeight
+    }
+
     private fun initOnce(): Boolean {
         if (context != EGL14.EGL_NO_CONTEXT)
             return true

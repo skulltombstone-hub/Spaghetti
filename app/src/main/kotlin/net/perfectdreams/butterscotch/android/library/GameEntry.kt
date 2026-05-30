@@ -1,5 +1,6 @@
 package net.perfectdreams.butterscotch.android.library
 
+import androidx.compose.ui.unit.IntSize
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import net.perfectdreams.butterscotch.android.UUIDAsStringSerializer
@@ -31,7 +32,7 @@ data class GameEntry(
     // The OS_LLVM_* debug variants (65536+) are intentionally omitted; they are internal build
     // flavors, not meaningful targets to pick for a WAD.
     @Serializable
-    enum class RunnerOs(val nativeValue: Int, val fancyName: String) {
+    enum class RunnerOs(val nativeValue: Int, val fancyName: String, val displayResolution: IntSize? = null) {
         WINDOWS(0, "Windows"),
         MACOSX(1, "macOS"),
         PSP(2, "PSP"),
@@ -44,15 +45,15 @@ data class GameEntry(
         WIN8NATIVE(9, "Windows 8 Native"),
         WIIU(10, "Wii U"),
         THREEDS(11, "3DS"),
-        PSVITA(12, "PS Vita"),
+        PSVITA(12, "PS Vita", IntSize(960, 544)),
         BB10(13, "BlackBerry 10"),
-        PS4(14, "PS4"),
-        XBOXONE(15, "Xbox One"),
-        PS3(16, "PS3"),
-        XBOX360(17, "Xbox 360"),
+        PS4(14, "PS4", IntSize(1920, 1080)),
+        XBOXONE(15, "Xbox One", IntSize(1920, 1080)),
+        PS3(16, "PS3", IntSize(1920, 1080)),
+        XBOX360(17, "Xbox 360", IntSize(1920, 1080)),
         UWP(18, "UWP"),
         AMAZON(19, "Amazon"),
-        SWITCH(20, "Switch"),
+        SWITCH(20, "Switch", IntSize(1280, 720)),
     }
 
     @Serializable

@@ -37,6 +37,17 @@ class ButterscotchDroidRunner(val dataWinPath: String, val savesPath: String, va
     val gamepadRouter = GamepadRouter(this)
     var fastForwardSpeed = 1.0f
 
+    /**
+     * Forward a SurfaceHolder size change to the EGL layer so the next frame renders at the right resolution.
+     *
+     * This NEEDS to be synchronized with the render thread, which is why we use a coroutine.
+     */
+    fun onSurfaceResized(width: Int, height: Int) {
+        glScope.launch {
+            egl.updateSize(width, height)
+        }
+    }
+
     fun startRenderLoop(surface: Surface) {
         require(renderJob == null) { "Trying to start a renderJob while one is already active! Bug?" }
 
