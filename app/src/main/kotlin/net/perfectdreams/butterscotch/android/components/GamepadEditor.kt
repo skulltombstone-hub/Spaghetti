@@ -12,7 +12,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -24,6 +26,7 @@ import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -39,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -340,11 +344,40 @@ private fun ElementEditDialog(
                     }
                     is GamepadElement.AnalogJoystick -> {
                         SlotField(element.device) { onChange(element.copy(device = it)) }
-                        TextButton(onClick = { onChange(element.copy(stick = GamepadStick.LEFT)) }) {
-                            Text("Left stick" + if (element.stick == GamepadStick.LEFT) " ✓" else "")
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .selectable(
+                                    selected = element.stick == GamepadStick.LEFT,
+                                    onClick = {
+                                        onChange(element.copy(stick = GamepadStick.LEFT))
+                                    },
+                                    role = Role.RadioButton
+                                )
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(selected = element.stick == GamepadStick.LEFT, onClick = null)
+                            Spacer(Modifier.width(16.dp))
+                            Text("Left Stick")
                         }
-                        TextButton(onClick = { onChange(element.copy(stick = GamepadStick.RIGHT)) }) {
-                            Text("Right stick" + if (element.stick == GamepadStick.RIGHT) " ✓" else "")
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .selectable(
+                                    selected = element.stick == GamepadStick.RIGHT,
+                                    onClick = {
+                                        onChange(element.copy(stick = GamepadStick.RIGHT))
+                                    },
+                                    role = Role.RadioButton
+                                )
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(selected = element.stick == GamepadStick.RIGHT, onClick = null)
+                            Spacer(Modifier.width(16.dp))
+                            Text("Right Stick")
                         }
                     }
 
