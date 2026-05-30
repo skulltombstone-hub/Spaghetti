@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -102,7 +103,7 @@ fun FastForwardButton(
         contentAlignment = Alignment.Center
     ) {
         Icon(
-            imageVector = Icons.Default.Menu,
+            imageVector = Icons.Default.FastForward,
             contentDescription = "Enable fast forward",
             tint = Color.White,
             // The Box is sized by placement (scale * shorter side), so size the glyph as a fraction of it
