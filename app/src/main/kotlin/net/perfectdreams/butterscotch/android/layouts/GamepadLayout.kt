@@ -10,7 +10,7 @@ data class GamepadLayout(
     val id: UUID,
     val fancyName: String,
     val orientation: GamepadTargetOrientation,
-    val element: List<GamepadElement>
+    val elements: List<GamepadElement>
 ) {
     enum class GamepadTargetOrientation {
         PORTRAIT,

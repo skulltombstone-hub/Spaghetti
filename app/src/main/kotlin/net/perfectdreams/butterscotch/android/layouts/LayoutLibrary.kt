@@ -6,7 +6,6 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import net.perfectdreams.butterscotch.android.library.GameEntry
 import java.io.File
 import java.util.UUID
 
@@ -48,7 +47,7 @@ class LayoutLibrary private constructor(
                     id = DEFAULT_LANDSCAPE_LAYOUT,
                     fancyName = "Default Landscape",
                     orientation = GamepadLayout.GamepadTargetOrientation.LANDSCAPE,
-                    element = listOf(
+                    elements = listOf(
                         GamepadElement.Joystick(
                             positionX = 0.16, positionY = 0.74, scale = 0.42, opacity = 1.0,
                             up = InputBinding.Keyboard(GmlKey.UP.code),
@@ -69,7 +68,7 @@ class LayoutLibrary private constructor(
                     orientation = GamepadLayout.GamepadTargetOrientation.PORTRAIT,
                     // Portrait is narrow, so the action buttons stack vertically on the right
                     // (Z bottommost = primary, where the thumb rests) instead of in a row.
-                    element = listOf(
+                    elements = listOf(
                         GamepadElement.Joystick(
                             positionX = 0.25, positionY = 0.85, scale = 0.42, opacity = 1.0,
                             up = InputBinding.Keyboard(GmlKey.UP.code),

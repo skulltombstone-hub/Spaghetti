@@ -1,7 +1,5 @@
 package net.perfectdreams.butterscotch.android.components
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -12,10 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -26,8 +21,6 @@ import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.RangeSlider
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -40,12 +33,9 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import net.perfectdreams.butterscotch.android.VirtualKeyState
@@ -90,23 +80,23 @@ fun BoxWithConstraintsScope.GamepadEditor(
     // Replace the element sharing [element]'s id with the new value, leaving the list order intact.
     fun update(element: GamepadElement) {
         val l = currentLayout
-        currentOnChange(l.copy(element = l.element.map { if (it.id == element.id) element else it }))
+        currentOnChange(l.copy(elements = l.elements.map { if (it.id == element.id) element else it }))
     }
 
     fun delete(id: UUID) {
         val l = currentLayout
-        currentOnChange(l.copy(element = l.element.filter { it.id != id }))
+        currentOnChange(l.copy(elements = l.elements.filter { it.id != id }))
         editingId = null
     }
 
     // Append a freshly-built element at the overlay center and open its editor straight away.
     fun add(element: GamepadElement) {
         val l = currentLayout
-        currentOnChange(l.copy(element = l.element + element))
+        currentOnChange(l.copy(elements = l.elements + element))
         editingId = element.id
     }
 
-    layout.element.forEach { element ->
+    layout.elements.forEach { element ->
         // Two gesture detectors on the same element: drag moves it (immediately), a long press with no movement opens its editor.
         // Movement past touch slop cancels the long press, so the two do not fight.
         val editModifier = placementOf(element)
@@ -118,14 +108,14 @@ fun BoxWithConstraintsScope.GamepadEditor(
                 var py = 0.0
                 detectDragGestures(
                     onDragStart = {
-                        currentLayout.element.firstOrNull { it.id == element.id }?.let {
+                        currentLayout.elements.firstOrNull { it.id == element.id }?.let {
                             px = it.positionX
                             py = it.positionY
                         }
                     },
                     onDrag = { change, dragAmount ->
                         change.consume()
-                        val el = currentLayout.element.firstOrNull { it.id == element.id }
+                        val el = currentLayout.elements.firstOrNull { it.id == element.id }
                         if (el != null) {
                             px = (px + dragAmount.x / widthPx).coerceIn(0.0, 1.0)
                             py = (py + dragAmount.y / heightPx).coerceIn(0.0, 1.0)
@@ -295,7 +285,7 @@ fun BoxWithConstraintsScope.GamepadEditor(
     }
 
     // key(editing.id) so the dialog's internal field state resets when a different element is picked.
-    val editing = editingId?.let { id -> layout.element.firstOrNull { it.id == id } }
+    val editing = editingId?.let { id -> layout.elements.firstOrNull { it.id == id } }
     if (editing != null) {
         key(editing.id) {
             ElementEditDialog(

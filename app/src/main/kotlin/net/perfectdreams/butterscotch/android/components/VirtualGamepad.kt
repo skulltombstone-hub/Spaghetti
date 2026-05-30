@@ -6,67 +6,30 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.BoxWithConstraintsScope
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuAnchorType
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.input.pointer.AwaitPointerEventScope
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -76,17 +39,11 @@ import net.perfectdreams.butterscotch.android.ButterscotchDroidRunner
 import net.perfectdreams.butterscotch.android.ButterscotchNative
 import net.perfectdreams.butterscotch.android.VirtualKeyState
 import java.util.UUID
-import kotlin.math.atan2
-import kotlin.math.min
-import kotlin.math.sqrt
 import net.perfectdreams.butterscotch.android.layouts.Gamepad
 import net.perfectdreams.butterscotch.android.layouts.GamepadElement
 import net.perfectdreams.butterscotch.android.layouts.GamepadLayout
-import net.perfectdreams.butterscotch.android.layouts.GamepadStick
 import net.perfectdreams.butterscotch.android.layouts.GmlKey
 import net.perfectdreams.butterscotch.android.layouts.InputBinding
-import net.perfectdreams.butterscotch.android.layouts.KeyTrigger
-import kotlin.collections.iterator
 
 /**
  * Just the on-screen gameplay controls (joystick + action buttons), no menu. Renders into whatever
@@ -167,7 +124,7 @@ fun defaultLabelFor(binding: InputBinding): String = when (binding) {
 // through [keys]. No edit affordances here at all.
 @Composable
 private fun BoxWithConstraintsScope.PlayableGamepad(layout: GamepadLayout, keys: VirtualKeyState, activeFastForwardButtonId: UUID?, onFastForward: (GamepadElement.FastForward) -> (Unit), onMenuOpen: () -> (Unit)) {
-    layout.element.forEach { element ->
+    layout.elements.forEach { element ->
         val placement = placementOf(element).alpha(element.opacity.toFloat())
         when (element) {
             is GamepadElement.Joystick -> Joystick(

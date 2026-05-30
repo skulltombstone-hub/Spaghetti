@@ -5,7 +5,6 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.text.Layout
 import android.util.Log
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -36,7 +35,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.viewinterop.AndroidView
 import net.perfectdreams.butterscotch.android.components.GameControls
 import net.perfectdreams.butterscotch.android.components.MenuOverlay
-import net.perfectdreams.butterscotch.android.gamepads.ButterscotchInputDeviceListener
 import net.perfectdreams.butterscotch.android.layouts.GamepadElement
 import net.perfectdreams.butterscotch.android.layouts.LayoutLibrary
 import net.perfectdreams.butterscotch.android.library.GameLibrary
@@ -222,7 +220,7 @@ class GameActivity : ComponentActivity() {
                         if (fastForwardActiveButtonId == null) {
                             butterscotchRunner.fastForwardSpeed = 1.0f
                         } else {
-                            val element = layout.element.firstOrNull { it.id == fastForwardActiveButtonId } as GamepadElement.FastForward?
+                            val element = layout.elements.firstOrNull { it.id == fastForwardActiveButtonId } as GamepadElement.FastForward?
 
                             if (element != null) {
                                 butterscotchRunner.fastForwardSpeed = element.speed
