@@ -68,6 +68,9 @@ fun BoxWithConstraintsScope.GamepadEditor(
     var editingId by remember { mutableStateOf<UUID?>(null) }
     var showSaveAsDialog by remember { mutableStateOf(false) }
 
+    // Snapshot of the layout as it was when the editor opened, so "Discard Changes" can push the  pre-edit state back.
+    val initialLayout = remember(layout.id) { layout }
+
     // Container size in pixels, used to convert drag deltas (px) into 0..1 position fractions.
     val widthPx = constraints.maxWidth.toFloat()
     val heightPx = constraints.maxHeight.toFloat()
@@ -280,7 +283,10 @@ fun BoxWithConstraintsScope.GamepadEditor(
             Spacer(Modifier.height(8.dp))
             Button(onClick = { showSaveAsDialog = true }) { Text("Save As") }
             Spacer(Modifier.height(8.dp))
-            Button(onClick = { onExitEditMode() }) { Text("Exit") }
+            Button(onClick = {
+                onLayoutChange(initialLayout)
+                onExitEditMode()
+            }) { Text("Discard Changes") }
         }
     }
 
