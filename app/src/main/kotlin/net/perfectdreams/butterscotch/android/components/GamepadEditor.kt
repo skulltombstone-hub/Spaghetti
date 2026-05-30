@@ -344,39 +344,15 @@ private fun ElementEditDialog(
                     }
                     is GamepadElement.AnalogJoystick -> {
                         SlotField(element.device) { onChange(element.copy(device = it)) }
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .selectable(
-                                    selected = element.stick == GamepadStick.LEFT,
-                                    onClick = {
-                                        onChange(element.copy(stick = GamepadStick.LEFT))
-                                    },
-                                    role = Role.RadioButton
-                                )
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(selected = element.stick == GamepadStick.LEFT, onClick = null)
-                            Spacer(Modifier.width(16.dp))
+                        RadioButtonWithContent(element.stick == GamepadStick.LEFT, onClick = {
+                            onChange(element.copy(stick = GamepadStick.LEFT))
+                        }) {
                             Text("Left Stick")
                         }
 
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .selectable(
-                                    selected = element.stick == GamepadStick.RIGHT,
-                                    onClick = {
-                                        onChange(element.copy(stick = GamepadStick.RIGHT))
-                                    },
-                                    role = Role.RadioButton
-                                )
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(selected = element.stick == GamepadStick.RIGHT, onClick = null)
-                            Spacer(Modifier.width(16.dp))
+                        RadioButtonWithContent(element.stick == GamepadStick.RIGHT, onClick = {
+                            onChange(element.copy(stick = GamepadStick.RIGHT))
+                        }) {
                             Text("Right Stick")
                         }
                     }
