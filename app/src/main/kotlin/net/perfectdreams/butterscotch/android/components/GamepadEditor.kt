@@ -2,9 +2,11 @@ package net.perfectdreams.butterscotch.android.components
 
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraintsScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -190,9 +192,13 @@ fun BoxWithConstraintsScope.GamepadEditor(
             style = TextStyle(fontSize = 13.sp)
         )
         Spacer(Modifier.height(8.dp))
-        Row(modifier = Modifier
+        // We use FlowRow instead of a normal row so that it behaves more like flex-wrap
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier
             .align(Alignment.CenterHorizontally)
-            .padding(top = 16.dp)) {
+            .padding(top = 16.dp)
+        ) {
             Box {
                 var addMenuExpanded by remember { mutableStateOf(false) }
                 Button(onClick = { addMenuExpanded = true }) { Text("Add") }
