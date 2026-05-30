@@ -33,7 +33,8 @@ object GameImporter {
         "game.unx",   // Linux
         "game.ios",   // iOS
         "game.droid", // Android
-        "game.psp",   // PSP / PSVita / older console targets
+        "game.psp",   // PSP
+        "game.win",   // PSVita
         "game.osx",   // macOS
     )
 
