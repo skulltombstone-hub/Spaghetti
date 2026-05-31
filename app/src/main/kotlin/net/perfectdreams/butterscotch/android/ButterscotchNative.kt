@@ -80,6 +80,14 @@ object ButterscotchNative {
     /** Forward a key-up to the runner directly. See [onKeyDown] for threading rules. */
     external fun onKeyUp(keyCode: Int)
 
+    /**
+     * Forward a typed character (Unicode codepoint, layout + shift already applied) to the runner,
+     * backing keyboard_lastchar. Render thread only, same threading rules as [onKeyDown]. This is
+     * separate from [onKeyDown]: a key press produces both a key edge and (if it maps to a glyph) a
+     * character, just like GLFW's separate key/char callbacks.
+     */
+    external fun onCharacter(codePoint: Int)
+
     // ===[ Gamepad feed — render thread only, same rules as onKeyDown ]===
     //
     // Event-driven feed into the native RunnerGamepad subsystem. The host translates Android

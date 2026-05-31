@@ -64,6 +64,7 @@ fun GameMetadataScreen(
     var landscapeLayout by rememberSaveable { mutableStateOf(entry.landscapeLayout) }
     var runnerOs by rememberSaveable { mutableStateOf(entry.runnerOs) }
     var enablePhysicalControllers by rememberSaveable { mutableStateOf(entry.enablePhysicalControllers) }
+    var enablePhysicalKeyboard by rememberSaveable { mutableStateOf(entry.enablePhysicalKeyboard) }
 
     val titleTrimmed = title.trim()
     val titleChanged = titleTrimmed.isNotBlank() && titleTrimmed != entry.title
@@ -71,6 +72,7 @@ fun GameMetadataScreen(
     val layoutsChanged = portraitLayout != entry.portraitLayout || landscapeLayout != entry.landscapeLayout
     val runnerOsChanged = runnerOs != entry.runnerOs
     val controllersChanged = enablePhysicalControllers != entry.enablePhysicalControllers
+    val keyboardChanged = enablePhysicalKeyboard != entry.enablePhysicalKeyboard
 
     Scaffold(
         topBar = {
@@ -103,20 +105,28 @@ fun GameMetadataScreen(
                         onSelect = { runnerOs = it },
                     )
                     Spacer(Modifier.height(16.dp))
-                    ControllerToggle(
+                    InputToggle(
+                        label = "Enable physical controllers",
                         checked = enablePhysicalControllers,
                         onChange = { enablePhysicalControllers = it },
                     )
                     Spacer(Modifier.height(16.dp))
+                    InputToggle(
+                        label = "Enable physical keyboard",
+                        checked = enablePhysicalKeyboard,
+                        onChange = { enablePhysicalKeyboard = it },
+                    )
+                    Spacer(Modifier.height(16.dp))
                 },
                 loadCandidates = { scanIconCandidates(gameLibrary.bundleDir(entry)) },
-                saveEnabled = titleChanged || iconChanged || layoutsChanged || runnerOsChanged || controllersChanged,
+                saveEnabled = titleChanged || iconChanged || layoutsChanged || runnerOsChanged || controllersChanged || keyboardChanged,
                 onSave = {
                     if (titleChanged) gameLibrary.setTitle(entry.id, titleTrimmed)
                     if (iconChanged) gameLibrary.setIcon(entry.id, selectedIcon)
                     if (layoutsChanged) gameLibrary.update(entry.id) { it.copy(portraitLayout = portraitLayout, landscapeLayout = landscapeLayout) }
                     if (runnerOsChanged) gameLibrary.update(entry.id) { it.copy(runnerOs = runnerOs) }
                     if (controllersChanged) gameLibrary.update(entry.id) { it.copy(enablePhysicalControllers = enablePhysicalControllers) }
+                    if (keyboardChanged) gameLibrary.update(entry.id) { it.copy(enablePhysicalKeyboard = enablePhysicalKeyboard) }
                     nav.popBackStack()
                 },
             )
@@ -201,11 +211,12 @@ private fun OsDropdown(
     }
 }
 
-// Toggles whether physical controllers (Bluetooth/USB gamepads) feed this game's GML gamepad_*
-// builtins. Staged and committed on Save like the other fields. Off is an escape hatch for games
-// that misbehave when a controller is attached (e.g. ones that auto-switch to a console UI).
+// Labeled on/off switch row for a physical-input source (controllers, keyboard). Staged and
+// committed on Save like the other fields. Off is an escape hatch for games that misbehave when
+// that input is attached (e.g. ones that auto-switch to a console UI when a controller appears).
 @Composable
-private fun ControllerToggle(
+private fun InputToggle(
+    label: String,
     checked: Boolean,
     onChange: (Boolean) -> Unit,
 ) {
@@ -213,7 +224,7 @@ private fun ControllerToggle(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text("Enable physical controllers", modifier = Modifier.weight(1f))
+        Text(label, modifier = Modifier.weight(1f))
         Switch(checked = checked, onCheckedChange = onChange)
     }
 }

@@ -22,11 +22,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <!-- configChanges: "I will handle the activity myself DO NOT TEAR IT DOWN PLEASE -->
+        <!-- configChanges: "I will handle the activity myself DO NOT TEAR IT DOWN PLEASE" -->
+        <!-- The keyboard/navigation is used to NOT tear down when a keyboard is connected/disconnected -->
         <activity
             android:name=".GameActivity"
             android:exported="false"
-            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode"
+            android:configChanges="orientation|screenSize|screenLayout|keyboard|keyboardHidden|navigation|uiMode"
             android:theme="@style/Theme.ButterscotchAndroid" />
     </application>
 

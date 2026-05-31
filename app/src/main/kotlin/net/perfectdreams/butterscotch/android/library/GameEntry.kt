@@ -26,6 +26,8 @@ data class GameEntry(
     val runnerOs: RunnerOs = RunnerOs.WINDOWS,
     /** When true, physical controllers (Bluetooth/USB gamepads) feed the GML gamepad_* builtins. Default on; turn off for games that misbehave with a controller attached. */
     val enablePhysicalControllers: Boolean = true,
+    /** When true, a physical (USB/Bluetooth) keyboard feeds the GML keyboard_* builtins. Default on; turn off for games that misbehave with a keyboard attached. */
+    val enablePhysicalKeyboard: Boolean = true,
 ) {
     // Mirrors the YoYoOperatingSystem enum in Butterscotch's runner.h. nativeValue MUST match the
     // C enum's integer value, since it is passed straight through startRunner to runner->osType.

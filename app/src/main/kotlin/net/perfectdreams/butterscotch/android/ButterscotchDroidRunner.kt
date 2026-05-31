@@ -19,7 +19,7 @@ import kotlinx.coroutines.yield
 import java.util.concurrent.Executors
 
 // The Butterscotch Android API is actually "global bound", but we use a class to help managing things here (and will be useful if we refactor down the road)
-class ButterscotchDroidRunner(val dataWinPath: String, val savesPath: String, val osType: Int, val enablePhysicalControllers: Boolean) {
+class ButterscotchDroidRunner(val dataWinPath: String, val savesPath: String, val osType: Int, val enablePhysicalControllers: Boolean, val enablePhysicalKeyboard: Boolean) {
     companion object {
         private const val TAG = "ButterscotchRenderLoop"
 
@@ -35,6 +35,7 @@ class ButterscotchDroidRunner(val dataWinPath: String, val savesPath: String, va
     var paused = MutableStateFlow(false)
     private val inputChannel = Channel<InputEvent>(capacity = 256, onBufferOverflow = BufferOverflow.DROP_OLDEST,)
     val gamepadRouter = GamepadRouter(this)
+    val keyboardRouter = KeyboardRouter(this)
     var fastForwardSpeed = 1.0f
 
     /**
@@ -168,6 +169,7 @@ class ButterscotchDroidRunner(val dataWinPath: String, val savesPath: String, va
 
     sealed interface InputEvent {
         data class Key(val code: Int, val isDown: Boolean) : InputEvent
+        data class Char(val codePoint: Int) : InputEvent
         data class GamepadButton(val device: Int, val button: Int, val isDown: Boolean) : InputEvent
         data class GamepadAxis(val device: Int, val axis: Int, val value: Float) : InputEvent
         data class GamepadConnected(val device: Int, val name: String?) : InputEvent
@@ -181,6 +183,15 @@ class ButterscotchDroidRunner(val dataWinPath: String, val savesPath: String, va
      */
     fun onKey(keyCode: Int, isDown: Boolean) {
         inputChannel.trySend(InputEvent.Key(keyCode, isDown))
+    }
+
+    /**
+     * Queue a typed character (Unicode codepoint) for the runner, backing keyboard_lastchar.
+     *
+     * Safe to use from the UI thread because this only queues the input.
+     */
+    fun onChar(codePoint: Int) {
+        inputChannel.trySend(InputEvent.Char(codePoint))
     }
 
     // Gamepad queueing. All safe to call from the UI thread (just enqueues into the Channel). The
@@ -216,6 +227,7 @@ class ButterscotchDroidRunner(val dataWinPath: String, val savesPath: String, va
                     ButterscotchNative.onKeyDown(event.code)
                 else
                     ButterscotchNative.onKeyUp(event.code)
+                is InputEvent.Char -> ButterscotchNative.onCharacter(event.codePoint)
                 is InputEvent.GamepadButton -> ButterscotchNative.gamepadButton(event.device, event.button, event.isDown)
                 is InputEvent.GamepadAxis -> ButterscotchNative.gamepadAxis(event.device, event.axis, event.value)
                 is InputEvent.GamepadConnected -> ButterscotchNative.gamepadConnected(event.device, event.name)

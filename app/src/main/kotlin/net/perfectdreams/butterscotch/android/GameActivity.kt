@@ -105,7 +105,7 @@ class GameActivity : ComponentActivity() {
         // exit would otherwise immediately finish() us via the LaunchedEffect below.
         ButterscotchNative.resetExitLatch()
 
-        val butterscotchRunner = ButterscotchDroidRunner(wadFile.absolutePath, savesDir.absolutePath, entry.runnerOs.nativeValue,  entry.enablePhysicalControllers)
+        val butterscotchRunner = ButterscotchDroidRunner(wadFile.absolutePath, savesDir.absolutePath, entry.runnerOs.nativeValue,  entry.enablePhysicalControllers, entry.enablePhysicalKeyboard)
         this.butterscotchRunner = butterscotchRunner
 
         setContent {
@@ -363,6 +363,10 @@ class GameActivity : ComponentActivity() {
             // Drop every controller so nothing is left held down while we're backgrounded
             runner.gamepadRouter.releaseAll()
         }
+
+        // Drop every held keyboard key too, so nothing stays stuck down while we're backgrounded
+        if (runner.enablePhysicalKeyboard)
+            runner.keyboardRouter.releaseAll()
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
@@ -370,6 +374,10 @@ class GameActivity : ComponentActivity() {
 
         // We return true here so that gamepad keypresses don't bubble up to Compose
         if (runner.enablePhysicalControllers && runner.gamepadRouter.handleKeyEvent(event))
+            return true
+
+        // Same idea for a physical keyboard: consume it so it doesn't reach Compose
+        if (runner.enablePhysicalKeyboard && runner.keyboardRouter.handleKeyEvent(event))
             return true
 
         return super.dispatchKeyEvent(event)
