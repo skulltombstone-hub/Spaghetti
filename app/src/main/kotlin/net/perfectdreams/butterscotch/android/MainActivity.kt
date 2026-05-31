@@ -2,16 +2,19 @@ package net.perfectdreams.butterscotch.android
 
 import android.content.Intent
 import android.os.Bundle
-import android.view.ViewAnimationUtils
-import android.view.animation.AccelerateInterpolator
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.core.animation.doOnEnd
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import net.perfectdreams.butterscotch.android.theme.ButterscotchAndroidTheme
 import java.util.UUID
-import kotlin.math.hypot
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -40,30 +43,16 @@ class MainActivity : ComponentActivity() {
             // Unknown/stale id: fall through to the normal launcher UI.
         }
 
-        // Hold the splash a short beat so the reveal is actually perceptible (Compose boots near-instantly otherwise)
-        var splashReady = false
-        splashScreen.setKeepOnScreenCondition { !splashReady }
-        window.decorView.postDelayed({ splashReady = true }, 350)
-
-        splashScreen.
-        // Tier 1 cut-out: collapse the cream splash into a shrinking circle, revealing the app underneath
-        splashScreen.setOnExitAnimationListener { provider ->
-            val splashView = provider.view
-            val cx = splashView.width / 2
-            val cy = splashView.height / 2
-            val startRadius = hypot(cx.toFloat(), cy.toFloat())
-            ViewAnimationUtils.createCircularReveal(splashView, cx, cy, startRadius, 0f).apply {
-                interpolator = AccelerateInterpolator()
-                duration = 450L
-                doOnEnd { provider.remove() }
-                start()
-            }
-        }
-
         enableEdgeToEdge()
         setContent {
             ButterscotchAndroidTheme {
-                ButterscotchApp(gameLibrary, layoutLibrary)
+                var splashGone by remember { mutableStateOf(false) }
+                Box(Modifier.fillMaxSize()) {
+                    ButterscotchApp(gameLibrary, layoutLibrary)
+                    if (!splashGone) {
+                        SplashReveal(onFinished = { splashGone = true })
+                    }
+                }
             }
         }
     }
