@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import net.perfectdreams.butterscotch.android.layouts.LayoutLibrary
 import java.io.File
 import java.util.UUID
 
@@ -91,6 +92,11 @@ class GameLibrary private constructor(
         title: String,
         gameType: GameEntry.GameType,
         icon: Bitmap? = null,
+        portraitLayout: UUID = LayoutLibrary.DEFAULT_PORTRAIT_LAYOUT,
+        landscapeLayout: UUID = LayoutLibrary.DEFAULT_LANDSCAPE_LAYOUT,
+        runnerOs: GameEntry.RunnerOs = GameEntry.RunnerOs.WINDOWS,
+        enablePhysicalControllers: Boolean = true,
+        enablePhysicalKeyboard: Boolean = true,
     ) {
         val initialSlotId = UUID.randomUUID()
         File(gameDir(staged.id), "saves/$initialSlotId").mkdirs()
@@ -106,7 +112,12 @@ class GameLibrary private constructor(
                     active = true,
                     fancyName = "Default",
                 )
-            )
+            ),
+            portraitLayout = portraitLayout,
+            landscapeLayout = landscapeLayout,
+            runnerOs = runnerOs,
+            enablePhysicalControllers = enablePhysicalControllers,
+            enablePhysicalKeyboard = enablePhysicalKeyboard,
         )
         entries.add(entry)
 

@@ -24,7 +24,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,8 +38,12 @@ import kotlinx.coroutines.withContext
 import net.perfectdreams.butterscotch.android.components.ButterscotchBackButton
 import net.perfectdreams.butterscotch.android.components.ButterscotchTopBar
 import net.perfectdreams.butterscotch.android.components.MetadataForm
+import net.perfectdreams.butterscotch.android.components.rememberGameMetadataFormState
+import net.perfectdreams.butterscotch.android.layouts.LayoutLibrary
+import net.perfectdreams.butterscotch.android.library.GameEntry
 import net.perfectdreams.butterscotch.android.library.GameEntry.GameType
 import net.perfectdreams.butterscotch.android.library.GameLibrary
+import java.util.UUID
 
 /**
  * Folder-picker → copy → configure flow. Lives under [Route.ImportGame] in the nav graph.
@@ -63,6 +66,7 @@ private sealed interface ImportUIState {
 @Composable
 fun ImportScreen(
     library: GameLibrary,
+    layoutLibrary: LayoutLibrary,
     nav: NavHostController
 ) {
     val context = LocalContext.current
@@ -137,7 +141,8 @@ fun ImportScreen(
                 is ImportUIState.Copying -> CopyingPane(s.currentFile)
                 is ImportUIState.Configure -> ConfigurePane(
                     result = s.result,
-                    onSave = { title, icon ->
+                    layoutLibrary = layoutLibrary,
+                    onSave = { title, icon, portraitLayout, landscapeLayout, runnerOs, enablePhysicalControllers, enablePhysicalKeyboard ->
                         library.commit(
                             s.result.staged,
                             title,
@@ -146,6 +151,11 @@ fun ImportScreen(
                                 s.result.wadFilename
                             ),
                             icon = icon,
+                            portraitLayout = portraitLayout,
+                            landscapeLayout = landscapeLayout,
+                            runnerOs = runnerOs,
+                            enablePhysicalControllers = enablePhysicalControllers,
+                            enablePhysicalKeyboard = enablePhysicalKeyboard,
                         )
                         nav.popBackStack()
                     }
@@ -201,31 +211,31 @@ private fun CopyingPane(currentFile: String?) {
 @Composable
 private fun ConfigurePane(
     result: GameImporter.Result.Success,
-    onSave: (title: String, icon: Bitmap?) -> Unit
+    layoutLibrary: LayoutLibrary,
+    onSave: (title: String, icon: Bitmap?, portraitLayout: UUID, landscapeLayout: UUID, runnerOs: GameEntry.RunnerOs, enablePhysicalControllers: Boolean, enablePhysicalKeyboard: Boolean) -> Unit
 ) {
     // suggestedTitle comes from GEN8 (may be null for pre-WAD10 games); fall back to the folder
     // name so the user never sees an empty field.
     val initial = result.suggestedTitle ?: result.folderName
-    var title by rememberSaveable(result.staged.id) { mutableStateOf(initial) }
-    var selectedIcon by remember(result.staged.id) {
-        mutableStateOf<Bitmap?>(result.iconCandidates.firstOrNull()?.bitmap)
-    }
+
+    // The game is not committed yet, so there is no entry to compare against: these start from the same defaults commit() would apply and are passed straight through onSave at commit time.
+    val state = rememberGameMetadataFormState(
+        key = result.staged.id,
+        title = initial,
+        icon = result.iconCandidates.firstOrNull()?.bitmap,
+        portraitLayout = LayoutLibrary.DEFAULT_PORTRAIT_LAYOUT,
+        landscapeLayout = LayoutLibrary.DEFAULT_LANDSCAPE_LAYOUT,
+        runnerOs = GameEntry.RunnerOs.WINDOWS,
+        enablePhysicalControllers = true,
+        enablePhysicalKeyboard = true,
+    )
 
     MetadataForm(
-        title = title,
-        onTitleChange = { title = it },
-        selectedIcon = selectedIcon,
-        onIconChange = { selectedIcon = it },
+        layoutLibrary = layoutLibrary,
+        state = state,
         loadCandidates = { result.iconCandidates },
-        saveEnabled = title.isNotBlank(),
-        onSave = { onSave(title.ifBlank { initial }, selectedIcon) },
-        middleContent = {
-            Text("Detected WAD: ${result.wadFilename}", style = MaterialTheme.typography.bodyMedium)
-            if (result.wadVersion >= 0) {
-                Text("WAD version: ${result.wadVersion}", style = MaterialTheme.typography.bodyMedium)
-            }
-            Spacer(Modifier.height(16.dp))
-        },
+        saveEnabled = state.title.isNotBlank(),
+        onSave = { onSave(state.title.ifBlank { initial }, state.selectedIcon, state.portraitLayout, state.landscapeLayout, state.runnerOs, state.enablePhysicalControllers, state.enablePhysicalKeyboard) },
     )
 }
 

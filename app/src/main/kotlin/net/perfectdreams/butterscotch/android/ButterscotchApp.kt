@@ -31,7 +31,7 @@ fun ButterscotchApp(gameLibrary: GameLibrary, layoutLibrary: LayoutLibrary) {
             LauncherScreen(library = gameLibrary, nav = nav)
         }
         composable<Route.ImportGame> {
-            ImportScreen(library = gameLibrary, nav)
+            ImportScreen(library = gameLibrary, layoutLibrary = layoutLibrary, nav = nav)
         }
         composable<Route.About> {
             AboutScreen(nav = nav)
