@@ -52,7 +52,9 @@ import net.perfectdreams.butterscotch.android.library.GameLibrary
  */
 private sealed interface ImportUIState {
     data object Intro : ImportUIState
-    data object Copying : ImportUIState
+    class Copying : ImportUIState {
+        var currentFile by mutableStateOf<String?>(null)
+    }
     data class Configure(val result: GameImporter.Result.Success) : ImportUIState
     data class Error(val message: String, val previous: ImportUIState = Intro) : ImportUIState
 }
@@ -72,9 +74,10 @@ fun ImportScreen(
             // User cancelled the picker — stay on Intro.
             return@rememberLauncherForActivityResult
         }
-        state = ImportUIState.Copying
+        val copyingState = ImportUIState.Copying()
+        state = copyingState
         scope.launch {
-            state = when (val result = GameImporter.import(context, uri, library)) {
+            state = when (val result = GameImporter.import(context, uri, library) { copyingState.currentFile = it }) {
                 is GameImporter.Result.Success -> ImportUIState.Configure(result)
                 is GameImporter.Result.MissingWad -> ImportUIState.Error(
                     "Missing WAD in folder!\n\nExpected one of: ${GameImporter.WAD_FILENAMES.joinToString(", ")}"
@@ -89,9 +92,10 @@ fun ImportScreen(
             // User cancelled the picker — stay on Intro.
             return@rememberLauncherForActivityResult
         }
-        state = ImportUIState.Copying
+        val copyingState = ImportUIState.Copying()
+        state = copyingState
         scope.launch {
-            state = when (val result = GameImporter.importZip(context, uri, library)) {
+            state = when (val result = GameImporter.importZip(context, uri, library) { copyingState.currentFile = it }) {
                 is GameImporter.Result.Success -> ImportUIState.Configure(result)
                 is GameImporter.Result.MissingWad -> ImportUIState.Error(
                     "Missing WAD in ZIP!\n\nExpected one of: ${GameImporter.WAD_FILENAMES.joinToString(", ")}"
@@ -130,7 +134,7 @@ fun ImportScreen(
                     onSelectFolder = { pickFolder.launch(null) },
                     onSelectZip = { pickZip.launch(arrayOf("application/zip", "application/x-zip-compressed", "application/octet-stream")) },
                 )
-                ImportUIState.Copying -> CopyingPane()
+                is ImportUIState.Copying -> CopyingPane(s.currentFile)
                 is ImportUIState.Configure -> ConfigurePane(
                     result = s.result,
                     onSave = { title, icon ->
@@ -179,7 +183,7 @@ private fun IntroPane(onSelectFolder: () -> Unit, onSelectZip: () -> Unit) {
 }
 
 @Composable
-private fun CopyingPane() {
+private fun CopyingPane(currentFile: String?) {
     Column(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
@@ -187,7 +191,10 @@ private fun CopyingPane() {
     ) {
         CircularProgressIndicator()
         Spacer(Modifier.height(16.dp))
-        Text("Copying game files…")
+        Text("Copying game files...")
+        if (currentFile != null) {
+            Text(currentFile)
+        }
     }
 }
 

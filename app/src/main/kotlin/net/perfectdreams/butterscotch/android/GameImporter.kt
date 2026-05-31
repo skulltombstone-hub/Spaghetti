@@ -75,6 +75,7 @@ object GameImporter {
         context: Context,
         treeUri: Uri,
         library: GameLibrary,
+        writeFileCallback: (String) -> (Unit)
     ): Result = withContext(Dispatchers.IO) {
         val root = DocumentFile.fromTreeUri(context, treeUri)
         if (root == null || !root.isDirectory) {
@@ -91,7 +92,7 @@ object GameImporter {
         val staged = library.beginStaging()
 
         try {
-            copyTree(context, root, staged.bundleDir)
+            copyTree(context, root, staged.bundleDir, writeFileCallback)
         } catch (e: Exception) {
             Log.e(TAG, "Copy failed for $treeUri", e)
             library.discardStaging(staged)
@@ -114,6 +115,7 @@ object GameImporter {
         context: Context,
         zipUri: Uri,
         library: GameLibrary,
+        writeFileCallback: (String) -> (Unit)
     ): Result = withContext(Dispatchers.IO) {
         val displayName = queryDisplayName(context, zipUri)
         val fallbackName = (displayName?.removeSuffix(".zip") ?: "").ifBlank { "Imported Game" }
@@ -126,7 +128,7 @@ object GameImporter {
         temp.mkdirs()
 
         try {
-            extractZip(context, zipUri, temp)
+            extractZip(context, zipUri, temp, writeFileCallback)
         } catch (e: Exception) {
             Log.e(TAG, "Zip extraction failed for $zipUri", e)
             temp.deleteRecursively()
@@ -195,14 +197,18 @@ object GameImporter {
      * Recursive DocumentFile → File copy. Mirrors `GameActivity.extractAssetTree`'s shape but
      * sources from the SAF tree instead of assets/.
      */
-    private fun copyTree(context: Context, src: DocumentFile, dest: File) {
+    private fun copyTree(context: Context, src: DocumentFile, dest: File, writeFileCallback: (String) -> (Unit)) {
         if (!dest.exists()) dest.mkdirs()
         for (child in src.listFiles()) {
             val name = child.name ?: continue
             val target = File(dest, name)
             if (child.isDirectory) {
-                copyTree(context, child, target)
+                copyTree(context, child, target, writeFileCallback)
             } else if (child.isFile) {
+                val fileName = child.name
+                if (fileName != null) {
+                    writeFileCallback.invoke(fileName)
+                }
                 context.contentResolver.openInputStream(child.uri)?.use { input ->
                     target.outputStream().use { output -> input.copyTo(output) }
                 } ?: error("Could not open child $name for reading")
@@ -215,7 +221,7 @@ object GameImporter {
      * from [SaveSlotZip.importZipIntoSlot] — entries with `..` in their path are refused so a
      * malicious archive can't escape [dest].
      */
-    private fun extractZip(context: Context, source: Uri, dest: File) {
+    private fun extractZip(context: Context, source: Uri, dest: File, writeFileCallback: (String) -> (Unit)) {
         val input = context.contentResolver.openInputStream(source)
             ?: error("Could not open input stream for $source")
         input.use { ins ->
@@ -233,6 +239,7 @@ object GameImporter {
                         target.mkdirs()
                     } else {
                         target.parentFile?.mkdirs()
+                        writeFileCallback.invoke(target.name)
                         target.outputStream().use { out -> zip.copyTo(out) }
                     }
                     zip.closeEntry()
