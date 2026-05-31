@@ -51,6 +51,7 @@ import net.perfectdreams.butterscotch.android.layouts.InputBinding
 import net.perfectdreams.butterscotch.android.layouts.KeyTrigger
 import java.util.UUID
 import kotlin.math.absoluteValue
+import kotlin.math.roundToInt
 
 // The editor: every element becomes a draggable / long-pressable stand-in, plus a toolbar (add /
 // save / save as) and the per-element + "save as" dialogs. Elements are addressed by their stable
@@ -387,13 +388,22 @@ private fun ElementEditDialog(
 
                     is GamepadElement.Menu -> {}
                     is GamepadElement.FastForward -> {
+                        Text(text = element.speed.toString())
+
+                        val rangeStart = 0.25f
+                        val rangeEnd = 8f
+                        val stepSize = 0.25f
+                        val steps = ((rangeEnd - rangeStart) / stepSize).toInt() - 1
+
                         Slider(
                             value = element.speed,
                             onValueChange = {
-                                onChange(element.copy(speed = it.absoluteValue))
+                                // We do this to avoid floating point inaccuracies
+                                onChange(element.copy(speed = (it.absoluteValue / 0.25f).roundToInt() * 0.25f))
                             },
-                            steps = 1,
-                            valueRange = 2f..8f
+                            // The "steps" is how many "steps" there will be, NOT how much the value will change
+                            steps = steps,
+                            valueRange = 0.25f..8f
                         )
 
                         RadioButtonWithContent(element.toggle, onClick = {
