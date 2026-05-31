@@ -162,7 +162,7 @@ private fun IntroPane(onSelectFolder: () -> Unit, onSelectZip: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            "Select a folder or a ZIP with a GameMaker WAD file (data.win, game.unx, game.osx, game.droid, game.ios, game.psp, etc.)",
+            "Select a folder or a ZIP with a GameMaker WAD file (${GameImporter.WAD_FILENAMES.joinToString(", ")})",
             style = MaterialTheme.typography.bodyLarge,
         )
         Spacer(Modifier.height(24.dp))
