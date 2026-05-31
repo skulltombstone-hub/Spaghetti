@@ -1,4 +1,9 @@
 import java.util.Properties
+import org.gradle.api.DefaultTask
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.TaskAction
 
 plugins {
     alias(libs.plugins.android.application)
@@ -11,6 +16,8 @@ val keystorePropertiesFile = rootProject.file("keystore.properties")
 val keystoreProperties = Properties().apply {
     if (keystorePropertiesFile.exists()) keystorePropertiesFile.inputStream().use { load(it) }
 }
+
+val butterscotchRepoDir = file("../../Butterscotch")
 
 android {
     namespace = "net.perfectdreams.butterscotch.android"
@@ -86,11 +93,58 @@ android {
         cmake {
             // Point straight at the Butterscotch repo's root CMakeLists.txt.
             // Adjust if your checkout layout differs.
-            path = file("../../Butterscotch/CMakeLists.txt")
+            path = File(butterscotchRepoDir, "CMakeLists.txt")
             version = "3.22.1"
         }
     }
 
+}
+
+abstract class GenerateContributorsTask : DefaultTask() {
+    @get:Input
+    abstract val repoPath: Property<String>
+
+    @get:OutputDirectory
+    abstract val outputDir: DirectoryProperty
+
+    @TaskAction
+    fun generate() {
+        val repoDir = File(repoPath.get())
+        if (!repoDir.resolve(".git").exists())
+            error("The Butterscotch repository is not a real git repository!")
+
+        val process = ProcessBuilder(
+            "git", "-C", repoDir.absolutePath, "log", "--format=%aN"
+        ).redirectErrorStream(true).start()
+
+        val rawAuthors = process.inputStream.bufferedReader().use { it.readLines() }
+        process.waitFor()
+
+        val contributors = if (process.exitValue() != 0) emptyList() else
+            rawAuthors.asSequence()
+                .map { it.trim() }
+                .filter { it.isNotEmpty() }
+                .filter { !it.equals("MrPowerGamerBR", ignoreCase = true) }
+                .distinct()
+                .sortedBy { it.lowercase() }
+                .toList()
+
+        val rawDir = outputDir.get().asFile.resolve("raw").apply { mkdirs() }
+        rawDir.resolve("contributors.txt")
+            .writeText(contributors.joinToString("\n"))
+    }
+}
+
+androidComponents {
+    onVariants { variant ->
+        val taskName = "generate${variant.name.replaceFirstChar { it.uppercase() }}Contributors"
+        val generateTask = tasks.register(taskName, GenerateContributorsTask::class.java) {
+            repoPath.set(butterscotchRepoDir.absolutePath)
+        }
+        variant.sources.res?.addGeneratedSourceDirectory(
+            generateTask, GenerateContributorsTask::outputDir
+        )
+    }
 }
 
 dependencies {
