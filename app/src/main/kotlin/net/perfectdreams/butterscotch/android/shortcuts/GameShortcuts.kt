@@ -2,6 +2,7 @@ package net.perfectdreams.butterscotch.android.shortcuts
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.core.content.pm.ShortcutInfoCompat
 import androidx.core.content.pm.ShortcutManagerCompat
@@ -21,8 +22,13 @@ fun requestPinGameShortcut(context: Context, library: GameLibrary, entry: GameEn
 
     val iconFile = library.iconFile(entry)
     val icon = if (iconFile.exists()) {
-        BitmapFactory.decodeFile(iconFile.absolutePath)?.let { IconCompat.createWithBitmap(it) }
-            ?: IconCompat.createWithResource(context, R.mipmap.ic_launcher)
+        val decodedBitmap = BitmapFactory.decodeFile(iconFile.absolutePath)
+
+        if (decodedBitmap != null) {
+            IconCompat.createWithBitmap(Bitmap.createScaledBitmap(decodedBitmap, 256, 256, false))
+        } else {
+            IconCompat.createWithResource(context, R.mipmap.ic_launcher)
+        }
     } else {
         IconCompat.createWithResource(context, R.mipmap.ic_launcher)
     }
