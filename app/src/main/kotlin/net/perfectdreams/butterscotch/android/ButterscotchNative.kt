@@ -117,10 +117,11 @@ object ButterscotchNative {
      * exit. The caller is responsible for `eglSwapBuffers` after this returns (see
      * [ButterscotchEgl.swapBuffers]) and for pacing the loop (see [getTargetFrameHz]).
      *
-     * [winW]/[winH] are the current EGL window surface dimensions. [audioDtSeconds] is the time
-     * since the previous frame in seconds — used to advance the audio system.
+     * [winW]/[winH] are the current EGL window surface dimensions. [deltaTimeSeconds] is the time
+     * since the previous frame in seconds. The native side stamps it into the runner so it drives
+     * both the GML delta_time builtin and the audio system.
      */
-    external fun stepAndDraw(winW: Int, winH: Int, audioDtSeconds: Float): Int
+    external fun stepAndDraw(winW: Int, winH: Int, deltaTimeSeconds: Float): Int
 
     /**
      * The current room's tick rate in Hz (GM:S `room_speed`). Returns 0 if no room is active yet.

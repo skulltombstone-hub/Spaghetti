@@ -70,25 +70,24 @@ class ButterscotchDroidRunner(val dataWinPath: String, val savesPath: String, va
                     runnerStarted = true
                 }
 
-                var lastFrameNs = System.nanoTime()
+                var lastFrameStartNs = System.nanoTime()
 
                 // Don't worry about the egl.hasSurface check, if the surface dies, the finally block will be executed and (hopefully) a new surface will be created,
                 // starting a whole new render loop :3
                 while (isActive && egl.hasSurface) {
                     if (this@ButterscotchDroidRunner.paused.value) {
                         this@ButterscotchDroidRunner.paused.first { !it } // Wait until we are NOT paused
-                        // Now we set the lastFrameNs to avoid catching up
-                        lastFrameNs = System.nanoTime()
+                        // Reset the frame clock so resuming doesn't inject a giant delta_time spike
+                        lastFrameStartNs = System.nanoTime()
                     }
 
                     val frameStartNs = System.nanoTime()
-                    val audioDt = ((frameStartNs - lastFrameNs) / 1_000_000_000.0)
-                        .coerceIn(0.0, 0.1)
-                        .toFloat()
+                    val deltaTimeSeconds = ((frameStartNs - lastFrameStartNs) / 1_000_000_000.0).toFloat()
+                    lastFrameStartNs = frameStartNs
 
                     ButterscotchNative.beginFrame()
                     drainPendingInput()
-                    val stepStatus = ButterscotchNative.stepAndDraw(egl.width, egl.height, audioDt)
+                    val stepStatus = ButterscotchNative.stepAndDraw(egl.width, egl.height, deltaTimeSeconds)
 
                     when (stepStatus) {
                         ButterscotchNative.BUTTERSCOTCH_DROID_CONTINUE,
@@ -99,7 +98,8 @@ class ButterscotchDroidRunner(val dataWinPath: String, val savesPath: String, va
                             val hz = (ButterscotchNative.getTargetFrameHz() * this@ButterscotchDroidRunner.fastForwardSpeed).toLong()
                             if (hz > 0) {
                                 val targetNs = 1_000_000_000L / hz
-                                val nextDeadline = lastFrameNs + targetNs
+                                // lastFrameStartNs is this frame's start (set above), so we pace one period from there
+                                val nextDeadline = lastFrameStartNs + targetNs
                                 val remaining = nextDeadline - System.nanoTime()
                                 if (remaining > 2_000_000L) {
                                     Thread.sleep((remaining - 1_000_000L) / 1_000_000L)
@@ -107,9 +107,6 @@ class ButterscotchDroidRunner(val dataWinPath: String, val savesPath: String, va
                                 while (System.nanoTime() < nextDeadline) {
                                     // spin spin spin!
                                 }
-                                lastFrameNs = nextDeadline
-                            } else {
-                                lastFrameNs = System.nanoTime()
                             }
 
                             // Yield so other tasks (like our clean up task) can be executed
