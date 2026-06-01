@@ -3,6 +3,7 @@ package net.perfectdreams.butterscotch.android
 import android.content.Context
 import android.content.Intent
 import android.graphics.BitmapFactory
+import android.net.Uri
 import android.widget.Toast
 import androidx.core.graphics.drawable.toBitmap
 import androidx.compose.foundation.Image
@@ -47,7 +48,9 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.navigation.NavHostController
 import net.perfectdreams.butterscotch.android.components.ButterscotchTopBar
 import net.perfectdreams.butterscotch.android.library.GameEntry
@@ -83,6 +86,16 @@ fun LauncherScreen(
                         expanded = menuExpanded,
                         onDismissRequest = { menuExpanded = false },
                     ) {
+                        DropdownMenuItem(
+                            leadingIcon = { Icon(painterResource(R.drawable.discord), contentDescription = null, modifier = Modifier.size(24.dp)) },
+                            text = { Text("Discord Community") },
+                            onClick = {
+                                menuExpanded = false
+                                val intent = Intent(Intent.ACTION_VIEW, "https://discord.gg/2gQR7t3WJR".toUri())
+                                context.startActivity(intent)
+                            },
+                        )
+
                         DropdownMenuItem(
                             leadingIcon = { Icon(Icons.Filled.Info, contentDescription = null) },
                             text = { Text("About") },
