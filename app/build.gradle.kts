@@ -69,9 +69,12 @@ android {
 
     buildTypes {
         release {
+            buildConfigField("boolean", "FORCE_BUTTERSCOTCH_PRO", "false")
+
             isMinifyEnabled = true
             isShrinkResources = true
             signingConfig = if (keystorePropertiesFile.exists()) signingConfigs.getByName("release") else null
+            
             // Upload native symbol tables so Play Console can symbolicate crashes inside the Butterscotch runtime
             ndk {
                 debugSymbolLevel = "SYMBOL_TABLE"
@@ -80,6 +83,10 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+
+        debug {
+            buildConfigField("boolean", "FORCE_BUTTERSCOTCH_PRO", "false")
         }
     }
     compileOptions {

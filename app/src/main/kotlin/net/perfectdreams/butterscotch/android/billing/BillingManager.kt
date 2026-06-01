@@ -41,7 +41,7 @@ class BillingManager private constructor(
     }
 
     // Whether the user owns the Pro unlock, seeded from the local cache so the UI is correct before the (async) Play Store query comes back
-    var isPro by mutableStateOf(BuildConfig.DEBUG || prefs().getBoolean(KEY_PRO, false))
+    var isPro by mutableStateOf(if (BuildConfig.DEBUG) BuildConfig.FORCE_BUTTERSCOTCH_PRO else prefs().getBoolean(KEY_PRO, false))
         private set
 
     // ProductDetails for the Pro unlock once queried, used to show the localized price
@@ -192,7 +192,7 @@ class BillingManager private constructor(
     }
 
     private fun grantPro(value: Boolean) {
-        if (BuildConfig.DEBUG) {
+        if (BuildConfig.FORCE_BUTTERSCOTCH_PRO) {
             this.isPro = true
         } else {
             this.isPro = value
