@@ -1,7 +1,6 @@
 package net.perfectdreams.butterscotch.android
 
 import kotlinx.serialization.Serializable
-import java.util.UUID
 
 /**
  * The main game library navigation graph.
@@ -12,7 +11,7 @@ sealed interface Route {
     @Serializable data object Launcher : Route
     @Serializable data object ImportGame : Route
     @Serializable data object About : Route
-    @Serializable data object Pro : Route
+    @Serializable data object Plus : Route
     @Serializable data object Licenses : Route
     @Serializable data class GameSettings(val gameId: String) : Route
     @Serializable data class GameMetadata(val gameId: String) : Route

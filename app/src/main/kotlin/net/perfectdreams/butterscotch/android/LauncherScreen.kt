@@ -3,7 +3,6 @@ package net.perfectdreams.butterscotch.android
 import android.content.Context
 import android.content.Intent
 import android.graphics.BitmapFactory
-import android.net.Uri
 import android.widget.Toast
 import androidx.core.graphics.drawable.toBitmap
 import androidx.compose.foundation.Image
@@ -101,10 +100,10 @@ fun LauncherScreen(
 
                         DropdownMenuItem(
                             leadingIcon = { Icon(Icons.Filled.Star, contentDescription = null) },
-                            text = { Text("Butterscotch Pro") },
+                            text = { Text("Butterscotch Plus") },
                             onClick = {
                                 menuExpanded = false
-                                nav.navigate(Route.Pro)
+                                nav.navigate(Route.Plus)
                             },
                         )
 
@@ -155,7 +154,7 @@ fun LauncherScreen(
                 // The entries are already sorted here
                 itemsIndexed(entries, key = { _, entry -> entry.id.toString() }) { index, entry ->
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        if (!billing.isPro && index % 6 == 0) {
+                        if (!billing.isPlus && index % 6 == 0) {
                             BannerAd()
                         }
 

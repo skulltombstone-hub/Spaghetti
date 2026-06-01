@@ -29,7 +29,7 @@ import net.perfectdreams.butterscotch.android.BuildConfig
 /**
  * Owns the [BillingClient] connection and the in-app purchase lifecycle.
  *
- * The fields [isPro], [proProduct], [connectionState] are Compose-aware.
+ * The fields [isPlus], [plusProduct], [connectionState] are Compose-aware.
  */
 class BillingManager private constructor(
     private val appContext: Context,
@@ -41,12 +41,12 @@ class BillingManager private constructor(
     }
 
     // Whether the user owns the Pro unlock, seeded from the local cache so the UI is correct before the (async) Play Store query comes back
-    var isPro by mutableStateOf(if (BuildConfig.DEBUG) BuildConfig.FORCE_BUTTERSCOTCH_PRO else prefs().getBoolean(KEY_PRO, false))
+    var isPlus by mutableStateOf(if (BuildConfig.DEBUG) BuildConfig.FORCE_BUTTERSCOTCH_PLUS else prefs().getBoolean(KEY_PLUS, false))
         private set
 
     // ProductDetails for the Pro unlock once queried, used to show the localized price
     // Null until the first successful query
-    var proProduct by mutableStateOf<ProductDetails?>(null)
+    var plusProduct by mutableStateOf<ProductDetails?>(null)
         private set
 
     var connectionState by mutableStateOf(ConnectionState.DISCONNECTED)
@@ -110,7 +110,7 @@ class BillingManager private constructor(
             .setProductList(
                 listOf(
                     QueryProductDetailsParams.Product.newBuilder()
-                        .setProductId(PRO_PRODUCT_ID)
+                        .setProductId(PLUS_PRODUCT_ID)
                         .setProductType(BillingClient.ProductType.INAPP)
                         .build()
                 )
@@ -118,14 +118,14 @@ class BillingManager private constructor(
             .build()
         val result = client.queryProductDetails(params)
         if (result.billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
-            proProduct = result.productDetailsList?.firstOrNull { it.productId == PRO_PRODUCT_ID }
+            plusProduct = result.productDetailsList?.firstOrNull { it.productId == PLUS_PRODUCT_ID }
         } else {
             Log.w(TAG, "queryProductDetails failed: ${result.billingResult.responseCode}")
         }
     }
 
     /**
-     * Re-read the user's owned purchases from the Play Store cache and reconcile [isPro].
+     * Re-read the user's owned purchases from the Play Store cache and reconcile [isPlus].
      *
      * This is what restores the unlock on a new device or reinstall, so it runs on every connect.
      */
@@ -136,7 +136,7 @@ class BillingManager private constructor(
         val result = client.queryPurchasesAsync(params)
         if (result.billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
             val owned = result.purchasesList.any { purchase ->
-                purchase.products.contains(PRO_PRODUCT_ID) &&
+                purchase.products.contains(PLUS_PRODUCT_ID) &&
                     purchase.purchaseState == Purchase.PurchaseState.PURCHASED
             }
             grantPro(owned)
@@ -153,7 +153,7 @@ class BillingManager private constructor(
      * Returns false if we have no product details yet (connection not ready) so the caller can show  a "try again" message instead of silently doing nothing.
      */
     fun launchProPurchase(activity: Activity): Boolean {
-        val product = proProduct ?: return false
+        val product = plusProduct ?: return false
         val params = BillingFlowParams.newBuilder()
             .setProductDetailsParamsList(
                 listOf(
@@ -174,7 +174,7 @@ class BillingManager private constructor(
     // Grant the entitlement, then acknowledge so Google does not auto-refund within 3 days
     private fun handlePurchase(purchase: Purchase) {
         if (purchase.purchaseState != Purchase.PurchaseState.PURCHASED) return
-        if (!purchase.products.contains(PRO_PRODUCT_ID)) return
+        if (!purchase.products.contains(PLUS_PRODUCT_ID)) return
 
         grantPro(true)
 
@@ -192,11 +192,11 @@ class BillingManager private constructor(
     }
 
     private fun grantPro(value: Boolean) {
-        if (BuildConfig.FORCE_BUTTERSCOTCH_PRO) {
-            this.isPro = true
+        if (BuildConfig.FORCE_BUTTERSCOTCH_PLUS) {
+            this.isPlus = true
         } else {
-            this.isPro = value
-            prefs().edit().putBoolean(KEY_PRO, value).apply()
+            this.isPlus = value
+            prefs().edit().putBoolean(KEY_PLUS, value).apply()
         }
     }
 
@@ -205,8 +205,8 @@ class BillingManager private constructor(
     companion object {
         private const val TAG = "BillingManager"
         private const val PREFS_NAME = "butterscotch_billing"
-        private const val KEY_PRO = "pro_unlocked"
-        const val PRO_PRODUCT_ID = "butterscotch_pro"
+        private const val KEY_PLUS = "plus_unlocked"
+        const val PLUS_PRODUCT_ID = "butterscotch_pro"
 
         private var instance: BillingManager? = null
 

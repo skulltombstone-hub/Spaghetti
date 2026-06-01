@@ -36,8 +36,8 @@ fun ButterscotchApp(gameLibrary: GameLibrary, layoutLibrary: LayoutLibrary) {
         composable<Route.About> {
             AboutScreen(nav = nav)
         }
-        composable<Route.Pro> {
-            ProScreen(nav = nav)
+        composable<Route.Plus> {
+            PlusScreen(nav = nav)
         }
         composable<Route.Licenses> {
             LicensesScreen(nav = nav)

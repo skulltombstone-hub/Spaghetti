@@ -31,7 +31,7 @@ class MainActivity : ComponentActivity() {
         billing.connect()
 
         // Pro users never see ads, so there's no reason to spin up the AdMob SDK for them
-        if (!billing.isPro) {
+        if (!billing.isPlus) {
             MobileAds.initialize(this.applicationContext)
         }
 
@@ -41,7 +41,7 @@ class MainActivity : ComponentActivity() {
             intent.action = null
             intent.removeExtra(GameActivity.EXTRA_GAME_ID)
             if (gameIdAsString != null) {
-                if (billing.isPro) {
+                if (billing.isPlus) {
                     val gameId = UUID.fromString(gameIdAsString)
 
                     if (gameLibrary.findById(gameId) != null) {

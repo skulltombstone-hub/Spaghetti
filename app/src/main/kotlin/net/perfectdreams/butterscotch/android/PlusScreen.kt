@@ -22,10 +22,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Block
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
@@ -42,7 +40,6 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.imageResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
@@ -51,13 +48,13 @@ import net.perfectdreams.butterscotch.android.components.ButterscotchBackButton
 import net.perfectdreams.butterscotch.android.components.ButterscotchTopBar
 
 @Composable
-fun ProScreen(nav: NavHostController) {
+fun PlusScreen(nav: NavHostController) {
     val context = LocalContext.current
     val activity = LocalActivity.current
     val billing = remember { BillingManager.getInstance(context) }
 
     Scaffold(
-        topBar = { ButterscotchTopBar("Butterscotch Pro", nav, navigationIcon = { ButterscotchBackButton(nav) }) },
+        topBar = { ButterscotchTopBar("Butterscotch Plus", nav, navigationIcon = { ButterscotchBackButton(nav) }) },
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -79,8 +76,8 @@ fun ProScreen(nav: NavHostController) {
             )
 
             Image(
-                bitmap = ImageBitmap.imageResource(R.drawable.butterscotch_logo_pro),
-                contentDescription = "Butterscotch Pro logo",
+                bitmap = ImageBitmap.imageResource(R.drawable.butterscotch_logo_plus),
+                contentDescription = "Butterscotch Plus logo",
                 // Nearest-neighbor keeps the pixel-art crisp when scaled up
                 filterQuality = FilterQuality.None,
                 modifier = Modifier
@@ -88,7 +85,7 @@ fun ProScreen(nav: NavHostController) {
                     .offset { IntOffset(0, offsetY.dp.roundToPx()) },
             )
 
-            Text("Butterscotch Pro", style = MaterialTheme.typography.headlineMedium)
+            Text("Butterscotch Plus", style = MaterialTheme.typography.headlineMedium)
 
             Spacer(Modifier.height(24.dp))
 
@@ -100,19 +97,19 @@ fun ProScreen(nav: NavHostController) {
 
             Spacer(Modifier.height(32.dp))
 
-            if (billing.isPro) {
+            if (billing.isPlus) {
                 Button(onClick = {}, enabled = false) {
                     Text("Thanks for Supporting Butterscotch! :3")
                 }
             } else {
-                val price = billing.proProduct?.oneTimePurchaseOfferDetails?.formattedPrice
+                val price = billing.plusProduct?.oneTimePurchaseOfferDetails?.formattedPrice
                 Button(
                     onClick = { activity?.let { billing.launchProPurchase(it) } },
                     // No product details yet means the billing connection is not ready
-                    enabled = billing.proProduct != null && activity != null,
+                    enabled = billing.plusProduct != null && activity != null,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(if (price != null) "Get Pro • $price" else "Get Pro")
+                    Text(if (price != null) "Get Plus • $price" else "Get Plus")
                 }
             }
         }

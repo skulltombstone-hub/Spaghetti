@@ -93,9 +93,9 @@ fun SettingsScreen(
                         icon = Icons.AutoMirrored.Default.AddToHomeScreen,
                         title = "Add Shortcut to Home Screen",
                         subtitle = "Pin a launcher icon for this game",
-                        trailing = if (billing.isPro) null else ({ ProBadge() }),
+                        trailing = if (billing.isPlus) null else ({ ProBadge() }),
                         onClick = {
-                            if (billing.isPro) requestPinGameShortcut(context, library, entry) else nav.navigate(Route.Pro)
+                            if (billing.isPlus) requestPinGameShortcut(context, library, entry) else nav.navigate(Route.Plus)
                         },
                     )
                 }

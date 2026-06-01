@@ -69,7 +69,7 @@ android {
 
     buildTypes {
         release {
-            buildConfigField("boolean", "FORCE_BUTTERSCOTCH_PRO", "false")
+            buildConfigField("boolean", "FORCE_BUTTERSCOTCH_PLUS", "false")
 
             isMinifyEnabled = true
             isShrinkResources = true
@@ -86,7 +86,7 @@ android {
         }
 
         debug {
-            buildConfigField("boolean", "FORCE_BUTTERSCOTCH_PRO", "false")
+            buildConfigField("boolean", "FORCE_BUTTERSCOTCH_PLUS", "false")
         }
     }
     compileOptions {
