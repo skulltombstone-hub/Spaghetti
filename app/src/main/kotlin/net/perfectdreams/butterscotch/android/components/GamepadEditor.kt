@@ -1,5 +1,6 @@
 package net.perfectdreams.butterscotch.android.components
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -35,6 +36,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.state.ToggleableState
@@ -71,6 +73,9 @@ fun BoxWithConstraintsScope.GamepadEditor(
     var editingId by remember { mutableStateOf<UUID?>(null) }
     var showSaveAsDialog by remember { mutableStateOf(false) }
 
+    // When on, draws the placement grid and snaps a dragged element's center to the nearest grid intersection.
+    var snapToGrid by remember { mutableStateOf(false) }
+
     // Snapshot of the layout as it was when the editor opened, so "Discard Changes" can push the  pre-edit state back.
     val initialLayout = remember(layout.id) { layout }
 
@@ -83,6 +88,8 @@ fun BoxWithConstraintsScope.GamepadEditor(
     // captured-at-launch parameters, or mid-drag reads would be stale.
     val currentLayout by rememberUpdatedState(layout)
     val currentOnChange by rememberUpdatedState(onLayoutChange)
+    // Same reason: the drag handler reads the toggle live rather than the value captured when it launched.
+    val currentSnap by rememberUpdatedState(snapToGrid)
 
     // Replace the element sharing [element]'s id with the new value, leaving the list order intact.
     fun update(element: GamepadElement) {
@@ -101,6 +108,23 @@ fun BoxWithConstraintsScope.GamepadEditor(
         val l = currentLayout
         currentOnChange(l.copy(elements = l.elements + element))
         editingId = element.id
+    }
+
+    // Grid lines sit behind every element. The cell is a square sized off the shorter side (same reference placementOf uses), then tiled across both axes so cells stay square on any aspect ratio instead of stretching into rectangles. Drawn at the same pixel step the snap rounds to, so a snapped element lands on the intersection it shows.
+    if (snapToGrid) {
+        Canvas(Modifier.matchParentSize()) {
+            val cell = minOf(size.width, size.height) / GRID_DIVISIONS
+            var x = cell
+            while (x < size.width) {
+                drawLine(GRID_LINE_COLOR, Offset(x, 0f), Offset(x, size.height))
+                x += cell
+            }
+            var y = cell
+            while (y < size.height) {
+                drawLine(GRID_LINE_COLOR, Offset(0f, y), Offset(size.width, y))
+                y += cell
+            }
+        }
     }
 
     layout.elements.forEach { element ->
@@ -126,7 +150,12 @@ fun BoxWithConstraintsScope.GamepadEditor(
                         if (el != null) {
                             px = (px + dragAmount.x / widthPx).coerceIn(0.0, 1.0)
                             py = (py + dragAmount.y / heightPx).coerceIn(0.0, 1.0)
-                            update(el.movedTo(px, py))
+                            // Snapping rounds only what we commit to the model; px/py keep the raw position so the snap does not fight continued dragging.
+                            // The cell is square (sized off the shorter side), so each axis snaps in pixel space rather than to a fraction of its own length.
+                            if (currentSnap) {
+                                val cellPx = minOf(widthPx, heightPx) / GRID_DIVISIONS
+                                update(el.movedTo(snapFraction(px, widthPx, cellPx), snapFraction(py, heightPx, cellPx)))
+                            } else update(el.movedTo(px, py))
                         }
                     }
                 )
@@ -281,6 +310,8 @@ fun BoxWithConstraintsScope.GamepadEditor(
                     })
                 }
             }
+            Spacer(Modifier.height(8.dp))
+            Button(onClick = { snapToGrid = !snapToGrid }) { Text(if (snapToGrid) "Grid: On" else "Grid: Off") }
             Spacer(Modifier.height(8.dp))
             Button(onClick = {
                 onSave()
@@ -574,6 +605,17 @@ private fun GamepadButtonField(button: Int, onChange: (Int) -> Unit) {
             }
         }
     }
+}
+
+// Number of cells the placement grid is split into along each axis
+private const val GRID_DIVISIONS = 16
+private val GRID_LINE_COLOR = Color.White.copy(alpha = 0.15f)
+
+// Round a 0..1 position fraction to the nearest square-cell intersection. The cell is given in pixels (same on both axes), so we convert the fraction to pixels, snap, then back to a fraction of this axis' length.
+private fun snapFraction(fraction: Double, axisLengthPx: Float, cellPx: Float): Double {
+    if (cellPx <= 0f) return fraction
+    val snappedPx = (fraction * axisLengthPx / cellPx).roundToInt() * cellPx
+    return (snappedPx / axisLengthPx).toDouble().coerceIn(0.0, 1.0)
 }
 
 private fun percent(value: Double): String = "${(value * 100).toInt()}%"
