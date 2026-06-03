@@ -39,6 +39,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import net.perfectdreams.butterscotch.android.components.GameControls
 import net.perfectdreams.butterscotch.android.components.MenuOverlay
 import net.perfectdreams.butterscotch.android.layouts.GamepadElement
+import net.perfectdreams.butterscotch.android.layouts.GamepadLayout
 import net.perfectdreams.butterscotch.android.layouts.LayoutLibrary
 import net.perfectdreams.butterscotch.android.library.GameLibrary
 import net.perfectdreams.butterscotch.android.theme.ButterscotchAndroidTheme
@@ -352,20 +353,31 @@ class GameActivity : ComponentActivity() {
                                 }
                             }
                         }
-                    }
 
-                    MenuOverlay(
-                        butterscotchRunner,
-                        menuOpen,
-                        onMenuToggle = {
-                            menuOpen = it
-                        },
-                        onExitGame = {
-                            // This is blocking
-                            butterscotchRunner.requestExit()
-                        },
-                        onEditLayout = { editMode = true },
-                    )
+                        MenuOverlay(
+                            butterscotchRunner,
+                            menuOpen,
+                            onMenuToggle = {
+                                menuOpen = it
+                            },
+                            onExitGame = {
+                                // This is blocking
+                                butterscotchRunner.requestExit()
+                            },
+                            onEditLayout = { editMode = true },
+                            // Only offer layouts for the current orientation, since a portrait layout makes no sense in landscape and vice versa
+                            availableLayouts = layoutLibrary.entries.filter {
+                                it.orientation == if (isPortrait) GamepadLayout.GamepadTargetOrientation.PORTRAIT else GamepadLayout.GamepadTargetOrientation.LANDSCAPE
+                            },
+                            currentLayoutId = layout.id,
+                            onSelectLayout = { selected ->
+                                layout = selected
+                                gameLibrary.update(entry.id) { e ->
+                                    if (isPortrait) e.copy(portraitLayout = selected.id) else e.copy(landscapeLayout = selected.id)
+                                }
+                            },
+                        )
+                    }
                 }
             }
         }

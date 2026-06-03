@@ -220,6 +220,9 @@ fun MenuOverlay(
     onMenuToggle: (Boolean) -> Unit,
     onExitGame: () -> Unit,
     onEditLayout: () -> Unit,
+    availableLayouts: List<GamepadLayout>,
+    currentLayoutId: UUID,
+    onSelectLayout: (GamepadLayout) -> Unit,
     modifier: Modifier = Modifier
 ) {
     // Back button: if the menu is open, close it. Otherwise open it. Same toggle the hamburger does.
@@ -236,7 +239,10 @@ fun MenuOverlay(
             open = menuOpen,
             onDismiss = { onMenuToggle.invoke(false) },
             onExitGame = onExitGame,
-            onEditLayout = onEditLayout
+            onEditLayout = onEditLayout,
+            availableLayouts = availableLayouts,
+            currentLayoutId = currentLayoutId,
+            onSelectLayout = onSelectLayout
         )
     }
 }
@@ -258,9 +264,47 @@ private fun BoxScope.MenuSidebar(
     open: Boolean,
     onDismiss: () -> Unit,
     onExitGame: () -> Unit,
-    onEditLayout: () -> Unit
+    onEditLayout: () -> Unit,
+    availableLayouts: List<GamepadLayout>,
+    currentLayoutId: UUID,
+    onSelectLayout: (GamepadLayout) -> Unit
 ) {
     var isRoomWarpMenuOpen by remember { mutableStateOf(false) }
+    var isUseLayoutMenuOpen by remember { mutableStateOf(false) }
+
+    if (isUseLayoutMenuOpen) {
+        AlertDialog(
+            onDismissRequest = { isUseLayoutMenuOpen = false },
+            title = { Text("Use Layout") },
+            properties = DialogProperties(usePlatformDefaultWidth = false),
+            text = {
+                LazyColumn(modifier = Modifier.heightIn(max = 320.dp)) {
+                    itemsIndexed(availableLayouts, key = { _, item -> item.id }) { index, item ->
+                        ListItem(
+                            headlineContent = { Text(item.fancyName) },
+                            supportingContent = if (item.id == currentLayoutId) {
+                                { Text("Currently in use") }
+                            } else null,
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            modifier = Modifier.clickable {
+                                onSelectLayout(item)
+                                isUseLayoutMenuOpen = false
+                                onDismiss()
+                            }
+                        )
+                        if (availableLayouts.lastIndex > index) HorizontalDivider()
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    isUseLayoutMenuOpen = false
+                }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     if (isRoomWarpMenuOpen) {
         var roomNameFilter by remember { mutableStateOf("") }
@@ -415,6 +459,10 @@ private fun BoxScope.MenuSidebar(
                     fontSize = 16.sp,
                     modifier = Modifier.padding(top = 20.dp, bottom = 8.dp),
                 )
+
+                MenuItem(label = "Use Layout", onClick = {
+                    isUseLayoutMenuOpen = true
+                })
 
                 MenuItem(label = "Edit Layout", onClick = {
                     onDismiss()
