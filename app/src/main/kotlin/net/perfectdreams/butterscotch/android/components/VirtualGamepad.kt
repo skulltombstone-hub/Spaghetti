@@ -283,7 +283,7 @@ private fun BoxScope.MenuSidebar(
         }
 
         AlertDialog(
-            onDismissRequest = onDismiss,
+            onDismissRequest = { isRoomWarpMenuOpen = false },
             title = { Text("Select a Room") },
             properties = DialogProperties(usePlatformDefaultWidth = false),
             text = {
@@ -301,7 +301,9 @@ private fun BoxScope.MenuSidebar(
                     LazyColumn {
                         items(rooms) { item ->
                             Column(
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp)
                                     .clickable {
                                         ButterscotchNative.gotoRoom(item.index)
                                         isRoomWarpMenuOpen = false
@@ -401,12 +403,12 @@ private fun BoxScope.MenuSidebar(
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
 
+                HorizontalDivider()
+
                 MenuItem(label = "Exit", onClick = {
                     onDismiss()
                     onExitGame()
                 })
-
-                HorizontalDivider()
 
                 Text(
                     text = "Virtual Gamepad",
