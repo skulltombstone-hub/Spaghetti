@@ -18,6 +18,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -113,7 +114,8 @@ fun MetadataForm(
         Spacer(Modifier.height(16.dp))
 
         InputToggle(
-            label = "Enable physical controllers",
+            title = "Enable physical controllers",
+            subtitle = null,
             checked = state.enablePhysicalControllers,
             onChange = { state.enablePhysicalControllers = it },
         )
@@ -121,9 +123,19 @@ fun MetadataForm(
         Spacer(Modifier.height(16.dp))
 
         InputToggle(
-            label = "Enable physical keyboard",
+            title = "Enable physical keyboard",
+            subtitle = null,
             checked = state.enablePhysicalKeyboard,
             onChange = { state.enablePhysicalKeyboard = it },
+        )
+
+        Spacer(Modifier.height(24.dp))
+
+        InputToggle(
+            title = "Enable Widescreen Hack",
+            subtitle = "May cause visual glitches",
+            checked = state.enableWidescreenHack,
+            onChange = { state.enableWidescreenHack = it },
         )
 
         Spacer(Modifier.height(24.dp))
@@ -252,8 +264,9 @@ private fun OsDropdown(
 // committed on Save like the other fields. Off is an escape hatch for games that misbehave when
 // that input is attached (e.g. ones that auto-switch to a console UI when a controller appears).
 @Composable
-private fun InputToggle(
-    label: String,
+fun InputToggle(
+    title: String,
+    subtitle: String?,
     checked: Boolean,
     onChange: (Boolean) -> Unit,
 ) {
@@ -261,7 +274,17 @@ private fun InputToggle(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(label, modifier = Modifier.weight(1f))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title)
+            if (subtitle != null) {
+                Text(
+                    text = subtitle,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
+
         Switch(checked = checked, onCheckedChange = onChange)
     }
 }

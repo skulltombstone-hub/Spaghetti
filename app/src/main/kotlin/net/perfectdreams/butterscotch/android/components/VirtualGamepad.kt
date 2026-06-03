@@ -19,6 +19,9 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -34,7 +37,9 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -54,7 +59,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
-import net.perfectdreams.butterscotch.android.ButterscotchDroidRunner
 import net.perfectdreams.butterscotch.android.ButterscotchNative
 import net.perfectdreams.butterscotch.android.VirtualKeyState
 import java.util.UUID
@@ -215,14 +219,18 @@ private fun BoxWithConstraintsScope.PlayableGamepad(
  */
 @Composable
 fun MenuOverlay(
-    runner: ButterscotchDroidRunner,
     menuOpen: Boolean,
     onMenuToggle: (Boolean) -> Unit,
     onExitGame: () -> Unit,
     onEditLayout: () -> Unit,
-    availableLayouts: List<GamepadLayout>,
-    currentLayoutId: UUID,
-    onSelectLayout: (GamepadLayout) -> Unit,
+    portraitLayouts: List<GamepadLayout>,
+    landscapeLayouts: List<GamepadLayout>,
+    selectedPortraitLayoutId: UUID,
+    selectedLandscapeLayoutId: UUID,
+    onSelectPortraitLayout: (UUID) -> Unit,
+    onSelectLandscapeLayout: (UUID) -> Unit,
+    widescreenHackEnabled: Boolean,
+    onToggleWidescreenHack: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     // Back button: if the menu is open, close it. Otherwise open it. Same toggle the hamburger does.
@@ -240,9 +248,14 @@ fun MenuOverlay(
             onDismiss = { onMenuToggle.invoke(false) },
             onExitGame = onExitGame,
             onEditLayout = onEditLayout,
-            availableLayouts = availableLayouts,
-            currentLayoutId = currentLayoutId,
-            onSelectLayout = onSelectLayout
+            portraitLayouts = portraitLayouts,
+            landscapeLayouts = landscapeLayouts,
+            selectedPortraitLayoutId = selectedPortraitLayoutId,
+            selectedLandscapeLayoutId = selectedLandscapeLayoutId,
+            onSelectPortraitLayout = onSelectPortraitLayout,
+            onSelectLandscapeLayout = onSelectLandscapeLayout,
+            widescreenHackEnabled = widescreenHackEnabled,
+            onToggleWidescreenHack = onToggleWidescreenHack
         )
     }
 }
@@ -265,44 +278,29 @@ private fun BoxScope.MenuSidebar(
     onDismiss: () -> Unit,
     onExitGame: () -> Unit,
     onEditLayout: () -> Unit,
-    availableLayouts: List<GamepadLayout>,
-    currentLayoutId: UUID,
-    onSelectLayout: (GamepadLayout) -> Unit
+    portraitLayouts: List<GamepadLayout>,
+    landscapeLayouts: List<GamepadLayout>,
+    selectedPortraitLayoutId: UUID,
+    selectedLandscapeLayoutId: UUID,
+    onSelectPortraitLayout: (UUID) -> Unit,
+    onSelectLandscapeLayout: (UUID) -> Unit,
+    widescreenHackEnabled: Boolean,
+    onToggleWidescreenHack: (Boolean) -> Unit
 ) {
     var isRoomWarpMenuOpen by remember { mutableStateOf(false) }
-    var isUseLayoutMenuOpen by remember { mutableStateOf(false) }
+    var isSettingsOpen by remember { mutableStateOf(false) }
 
-    if (isUseLayoutMenuOpen) {
-        AlertDialog(
-            onDismissRequest = { isUseLayoutMenuOpen = false },
-            title = { Text("Use Layout") },
-            properties = DialogProperties(usePlatformDefaultWidth = false),
-            text = {
-                LazyColumn(modifier = Modifier.heightIn(max = 320.dp)) {
-                    itemsIndexed(availableLayouts, key = { _, item -> item.id }) { index, item ->
-                        ListItem(
-                            headlineContent = { Text(item.fancyName) },
-                            supportingContent = if (item.id == currentLayoutId) {
-                                { Text("Currently in use") }
-                            } else null,
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                            modifier = Modifier.clickable {
-                                onSelectLayout(item)
-                                isUseLayoutMenuOpen = false
-                                onDismiss()
-                            }
-                        )
-                        if (availableLayouts.lastIndex > index) HorizontalDivider()
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    isUseLayoutMenuOpen = false
-                }) {
-                    Text("Cancel")
-                }
-            }
+    if (isSettingsOpen) {
+        SettingsBottomSheet(
+            onDismiss = { isSettingsOpen = false },
+            portraitLayouts = portraitLayouts,
+            landscapeLayouts = landscapeLayouts,
+            selectedPortraitLayoutId = selectedPortraitLayoutId,
+            selectedLandscapeLayoutId = selectedLandscapeLayoutId,
+            onSelectPortraitLayout = onSelectPortraitLayout,
+            onSelectLandscapeLayout = onSelectLandscapeLayout,
+            widescreenHackEnabled = widescreenHackEnabled,
+            onToggleWidescreenHack = onToggleWidescreenHack
         )
     }
 
@@ -447,6 +445,10 @@ private fun BoxScope.MenuSidebar(
 
                 HorizontalDivider()
 
+                MenuItem(label = "Settings", onClick = {
+                    isSettingsOpen = true
+                })
+
                 MenuItem(label = "Exit", onClick = {
                     onDismiss()
                     onExitGame()
@@ -459,10 +461,6 @@ private fun BoxScope.MenuSidebar(
                     fontSize = 16.sp,
                     modifier = Modifier.padding(top = 20.dp, bottom = 8.dp),
                 )
-
-                MenuItem(label = "Use Layout", onClick = {
-                    isUseLayoutMenuOpen = true
-                })
 
                 MenuItem(label = "Edit Layout", onClick = {
                     onDismiss()
@@ -481,6 +479,65 @@ private fun BoxScope.MenuSidebar(
                     isRoomWarpMenuOpen = true
                 })
             }
+        }
+    }
+}
+
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun SettingsBottomSheet(
+    onDismiss: () -> Unit,
+    portraitLayouts: List<GamepadLayout>,
+    landscapeLayouts: List<GamepadLayout>,
+    selectedPortraitLayoutId: UUID,
+    selectedLandscapeLayoutId: UUID,
+    onSelectPortraitLayout: (UUID) -> Unit,
+    onSelectLandscapeLayout: (UUID) -> Unit,
+    widescreenHackEnabled: Boolean,
+    onToggleWidescreenHack: (Boolean) -> Unit
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp)
+            .padding(bottom = 24.dp)) {
+            Text(
+                text = "Settings",
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+
+            Text(
+                text = "Controls",
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp,
+                modifier = Modifier.padding(bottom = 8.dp),
+            )
+
+            LayoutDropdown(
+                label = "Portrait Layout",
+                selectedId = selectedPortraitLayoutId,
+                options = portraitLayouts,
+                onSelect = onSelectPortraitLayout,
+            )
+
+            Spacer(Modifier.height(16.dp))
+
+            LayoutDropdown(
+                label = "Landscape Layout",
+                selectedId = selectedLandscapeLayoutId,
+                options = landscapeLayouts,
+                onSelect = onSelectLandscapeLayout,
+            )
+
+            InputToggle(
+                "Enable Widescreen Hack",
+                "May cause visual glitches",
+                widescreenHackEnabled,
+                onToggleWidescreenHack
+            )
         }
     }
 }

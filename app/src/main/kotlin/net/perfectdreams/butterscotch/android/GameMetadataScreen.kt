@@ -46,6 +46,7 @@ fun GameMetadataScreen(
         runnerOs = entry.runnerOs,
         enablePhysicalControllers = entry.enablePhysicalControllers,
         enablePhysicalKeyboard = entry.enablePhysicalKeyboard,
+        enableWidescreenHack = entry.enableWidescreenHack
     )
 
     // The baseline is the persisted entry, so we only write back what the user actually touched instead of rewriting (and cache-invalidating) every field on Save.

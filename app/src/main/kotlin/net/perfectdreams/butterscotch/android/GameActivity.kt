@@ -34,6 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.viewinterop.AndroidView
 import net.perfectdreams.butterscotch.android.components.GameControls
@@ -107,7 +108,14 @@ class GameActivity : ComponentActivity() {
         // exit would otherwise immediately finish() us via the LaunchedEffect below.
         ButterscotchNative.resetExitLatch()
 
-        val butterscotchRunner = ButterscotchDroidRunner(wadFile.absolutePath, savesDir.absolutePath, entry.runnerOs.nativeValue,  entry.enablePhysicalControllers, entry.enablePhysicalKeyboard)
+        val butterscotchRunner = ButterscotchDroidRunner(
+            wadFile.absolutePath,
+            savesDir.absolutePath,
+            entry.runnerOs.nativeValue,
+            entry.enablePhysicalControllers,
+            entry.enablePhysicalKeyboard,
+            entry.enableWidescreenHack
+        )
         this.butterscotchRunner = butterscotchRunner
 
         setContent {
@@ -121,6 +129,8 @@ class GameActivity : ComponentActivity() {
                 var menuOpen by remember { mutableStateOf(false) }
                 var editMode by remember { mutableStateOf(false) }
                 var fastForwardActiveButtonId by remember { mutableStateOf<UUID?>(null) }
+                // Hoisted so the in-game Settings switch reflects (and persists) the live runner flag.
+                var widescreenHackEnabled by remember { mutableStateOf(entry.enableWidescreenHack) }
 
                 val isPaused = editMode || menuOpen
 
@@ -155,7 +165,9 @@ class GameActivity : ComponentActivity() {
                 val gameSurface = remember {
                     movableContentOf<Modifier> { modifier ->
                         AndroidView(
-                            modifier = modifier,
+                            modifier = modifier.onSizeChanged {
+                                butterscotchRunner.setGameSurfaceSize(it)
+                            },
                             factory = { ctx ->
                                 SurfaceView(ctx).apply {
                                     // setFixedSize requests the buffer resolution, the compositor scales it to the View.
@@ -355,7 +367,6 @@ class GameActivity : ComponentActivity() {
                         }
 
                         MenuOverlay(
-                            butterscotchRunner,
                             menuOpen,
                             onMenuToggle = {
                                 menuOpen = it
@@ -365,16 +376,25 @@ class GameActivity : ComponentActivity() {
                                 butterscotchRunner.requestExit()
                             },
                             onEditLayout = { editMode = true },
-                            // Only offer layouts for the current orientation, since a portrait layout makes no sense in landscape and vice versa
-                            availableLayouts = layoutLibrary.entries.filter {
-                                it.orientation == if (isPortrait) GamepadLayout.GamepadTargetOrientation.PORTRAIT else GamepadLayout.GamepadTargetOrientation.LANDSCAPE
+                            // Settings exposes both orientations at once, so each picker only lists layouts for its own orientation
+                            portraitLayouts = layoutLibrary.entries.filter { it.orientation == GamepadLayout.GamepadTargetOrientation.PORTRAIT },
+                            landscapeLayouts = layoutLibrary.entries.filter { it.orientation == GamepadLayout.GamepadTargetOrientation.LANDSCAPE },
+                            selectedPortraitLayoutId = liveEntry.portraitLayout,
+                            selectedLandscapeLayoutId = liveEntry.landscapeLayout,
+                            onSelectPortraitLayout = { id ->
+                                gameLibrary.update(entry.id) { e -> e.copy(portraitLayout = id) }
+                                // Only swap the rendered layout if it is the one currently on screen
+                                if (isPortrait) layoutLibrary.findById(id)?.let { layout = it }
                             },
-                            currentLayoutId = layout.id,
-                            onSelectLayout = { selected ->
-                                layout = selected
-                                gameLibrary.update(entry.id) { e ->
-                                    if (isPortrait) e.copy(portraitLayout = selected.id) else e.copy(landscapeLayout = selected.id)
-                                }
+                            onSelectLandscapeLayout = { id ->
+                                gameLibrary.update(entry.id) { e -> e.copy(landscapeLayout = id) }
+                                if (!isPortrait) layoutLibrary.findById(id)?.let { layout = it }
+                            },
+                            widescreenHackEnabled = widescreenHackEnabled,
+                            onToggleWidescreenHack = { enabled ->
+                                widescreenHackEnabled = enabled
+                                butterscotchRunner.enableWidescreenHack = enabled
+                                gameLibrary.update(entry.id) { it.copy(enableWidescreenHack = enabled) }
                             },
                         )
                     }

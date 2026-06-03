@@ -97,6 +97,7 @@ class GameLibrary private constructor(
         runnerOs: GameEntry.RunnerOs = GameEntry.RunnerOs.WINDOWS,
         enablePhysicalControllers: Boolean = true,
         enablePhysicalKeyboard: Boolean = true,
+        enableWidescreenHack: Boolean = false
     ) {
         val initialSlotId = UUID.randomUUID()
         File(gameDir(staged.id), "saves/$initialSlotId").mkdirs()

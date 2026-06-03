@@ -135,6 +135,7 @@ object ButterscotchNative {
     external fun getRoomCount(): Int
     external fun getRoomName(roomIndex: Int): String
     external fun gotoRoom(roomIndex: Int)
+    external fun setWidescreenHackAspectRatio(aspectRatio: Float)
 
     // ===[ Native -> Kotlin push state ]===
 

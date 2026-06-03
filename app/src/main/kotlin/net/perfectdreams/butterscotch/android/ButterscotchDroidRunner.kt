@@ -2,6 +2,7 @@ package net.perfectdreams.butterscotch.android
 
 import android.util.Log
 import android.view.Surface
+import androidx.compose.ui.unit.IntSize
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -19,7 +20,7 @@ import kotlinx.coroutines.yield
 import java.util.concurrent.Executors
 
 // The Butterscotch Android API is actually "global bound", but we use a class to help managing things here (and will be useful if we refactor down the road)
-class ButterscotchDroidRunner(val dataWinPath: String, val savesPath: String, val osType: Int, val enablePhysicalControllers: Boolean, val enablePhysicalKeyboard: Boolean) {
+class ButterscotchDroidRunner(val dataWinPath: String, val savesPath: String, val osType: Int, val enablePhysicalControllers: Boolean, val enablePhysicalKeyboard: Boolean, var enableWidescreenHack: Boolean) {
     companion object {
         private const val TAG = "ButterscotchRenderLoop"
 
@@ -37,6 +38,7 @@ class ButterscotchDroidRunner(val dataWinPath: String, val savesPath: String, va
     val gamepadRouter = GamepadRouter(this)
     val keyboardRouter = KeyboardRouter(this)
     var fastForwardSpeed = 1.0f
+    var surfaceSize = IntSize.Zero
 
     /**
      * Forward a SurfaceHolder size change to the EGL layer so the next frame renders at the right resolution.
@@ -79,6 +81,12 @@ class ButterscotchDroidRunner(val dataWinPath: String, val savesPath: String, va
                         this@ButterscotchDroidRunner.paused.first { !it } // Wait until we are NOT paused
                         // Reset the frame clock so resuming doesn't inject a giant delta_time spike
                         lastFrameStartNs = System.nanoTime()
+                    }
+
+                    if (this@ButterscotchDroidRunner.enableWidescreenHack && this@ButterscotchDroidRunner.surfaceSize.width != 0 && this@ButterscotchDroidRunner.surfaceSize.height != 0) {
+                        ButterscotchNative.setWidescreenHackAspectRatio(this@ButterscotchDroidRunner.surfaceSize.width / this@ButterscotchDroidRunner.surfaceSize.height.toFloat())
+                    } else {
+                        ButterscotchNative.setWidescreenHackAspectRatio(0.0f)
                     }
 
                     val frameStartNs = System.nanoTime()
@@ -149,6 +157,14 @@ class ButterscotchDroidRunner(val dataWinPath: String, val savesPath: String, va
                 renderJob?.cancelAndJoin()
 
                 requestExitInternal()
+            }
+        }
+    }
+
+    fun setGameSurfaceSize(surfaceSize: IntSize) {
+        runBlocking {
+            withContext(glDispatcher) {
+                this@ButterscotchDroidRunner.surfaceSize = surfaceSize
             }
         }
     }
