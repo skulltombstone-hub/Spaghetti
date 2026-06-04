@@ -83,13 +83,8 @@ import net.perfectdreams.butterscotch.android.layouts.InputBinding
 @Composable
 fun GameControls(
     layout: GamepadLayout,
-    editMode: Boolean,
+    editModeState: GamepadEditorState?,
     activeFastForwardButtonId: UUID?,
-    onLayoutChange: (GamepadLayout) -> Unit,
-    onExitEditMode: () -> Unit,
-    canSave: Boolean,
-    onSave: () -> Unit,
-    onSaveAs: (String) -> Unit,
     onMenuOpen: () -> (Unit),
     onFastForwardPress: (GamepadElement.FastForward) -> (Unit),
     onFastForwardRelease: (GamepadElement.FastForward) -> (Unit),
@@ -97,16 +92,8 @@ fun GameControls(
     modifier: Modifier = Modifier
 ) {
     BoxWithConstraints(modifier.clipToBounds()) {
-        if (editMode) {
-            GamepadEditor(
-                layout = layout,
-                keys = keys,
-                onLayoutChange = onLayoutChange,
-                onExitEditMode = onExitEditMode,
-                canSave = canSave,
-                onSave = onSave,
-                onSaveAs = onSaveAs
-            )
+        if (editModeState != null) {
+            GamepadEditor(editModeState)
         } else {
             PlayableGamepad(layout = layout, keys = keys, activeFastForwardButtonId, onFastForwardPress = onFastForwardPress, onFastForwardRelease = onFastForwardRelease) {
                 onMenuOpen.invoke()

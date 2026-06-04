@@ -41,6 +41,8 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.viewinterop.AndroidView
 import net.perfectdreams.butterscotch.android.components.FreeCameraOverlay
 import net.perfectdreams.butterscotch.android.components.GameControls
+import net.perfectdreams.butterscotch.android.components.GamepadEditorState
+import net.perfectdreams.butterscotch.android.components.GamepadEditorToolbar
 import net.perfectdreams.butterscotch.android.components.MenuOverlay
 import net.perfectdreams.butterscotch.android.layouts.GamepadElement
 import net.perfectdreams.butterscotch.android.layouts.GamepadLayout
@@ -130,15 +132,15 @@ class GameActivity : ComponentActivity() {
                 val keys = remember { VirtualKeyState(butterscotchRunner) }
 
                 var menuOpen by remember { mutableStateOf(false) }
-                var editMode by remember { mutableStateOf(false) }
                 // Free cam state lives on the runner (single source of truth, read on the render thread);
                 // we observe it here so the UI reacts to it.
                 val freeCam by butterscotchRunner.freeCamera.collectAsState()
                 var fastForwardActiveButtonId by remember { mutableStateOf<UUID?>(null) }
                 // Hoisted so the in-game Settings switch reflects (and persists) the live runner flag.
                 var widescreenHackEnabled by remember { mutableStateOf(entry.enableWidescreenHack) }
+                var editorState by remember { mutableStateOf<GamepadEditorState?>(null) }
 
-                val isPaused = editMode || menuOpen
+                val isPaused = editorState != null || menuOpen
 
                 LaunchedEffect(isPaused) {
                     if (!isPaused) {
@@ -152,7 +154,7 @@ class GameActivity : ComponentActivity() {
                 }
 
                 // Toggling edit mode drops any held keys so a press in flight does not stick.
-                LaunchedEffect(editMode) { keys.releaseAll() }
+                LaunchedEffect(editorState != null) { keys.releaseAll() }
 
                 // Auto-finish when the native runner reports it has exited (game quit, fatal error).
                 val hasExited = ButterscotchNative.hasExited
@@ -223,8 +225,7 @@ class GameActivity : ComponentActivity() {
                         } else {
                             4f / 3f
                         }
-                        val deviceAspect =
-                            constraints.maxWidth.toFloat() / constraints.maxHeight.toFloat()
+                        val deviceAspect = constraints.maxWidth.toFloat() / constraints.maxHeight.toFloat()
                         val layoutMode = pickLayoutMode(contentAspect, deviceAspect)
 
                         LaunchedEffect(layoutMode) {
@@ -238,10 +239,8 @@ class GameActivity : ComponentActivity() {
                         // Resolve this game's assigned layout for the current orientation, falling back to the built-in default if the id is missing.
                         // Keyed on (isPortrait, assignedId) so it  re-resolves on rotation AND when the assignment changes (after Save As).
                         // An Overlay/Stacked reflow changes neither, so in-progress edits survive it.
-                        val assignedId =
-                            if (isPortrait) liveEntry.portraitLayout else liveEntry.landscapeLayout
-                        val fallbackId =
-                            if (isPortrait) LayoutLibrary.DEFAULT_PORTRAIT_LAYOUT else LayoutLibrary.DEFAULT_LANDSCAPE_LAYOUT
+                        val assignedId = if (isPortrait) liveEntry.portraitLayout else liveEntry.landscapeLayout
+                        val fallbackId = if (isPortrait) LayoutLibrary.DEFAULT_PORTRAIT_LAYOUT else LayoutLibrary.DEFAULT_LANDSCAPE_LAYOUT
 
                         Log.i(
                             TAG,
@@ -249,30 +248,19 @@ class GameActivity : ComponentActivity() {
                         )
 
                         var layout by remember(isPortrait, assignedId) {
-                            mutableStateOf(
-                                layoutLibrary.findById(assignedId) ?: layoutLibrary.findById(
-                                    fallbackId
-                                )!!
-                            )
+                            val newLayout = layoutLibrary.findById(assignedId) ?: layoutLibrary.findById(fallbackId)!!
+                            mutableStateOf(newLayout)
                         }
 
-
-                        // Save only applies to user layouts; the built-in defaults are read-only.
-                        val canSave =
-                            layout.id != LayoutLibrary.DEFAULT_PORTRAIT_LAYOUT && layout.id != LayoutLibrary.DEFAULT_LANDSCAPE_LAYOUT
-                        val onSave = { layoutLibrary.upsert(layout) }
-                        val onSaveAs = { name: String ->
-                            // Fork to a fresh id with the given name, persist it, and point this game's
-                            // orientation-specific layout at the copy so it loads next time. Keep editing it.
-                            val forked = layout.copy(id = UUID.randomUUID(), fancyName = name)
-                            layoutLibrary.upsert(forked)
-                            gameLibrary.update(entry.id) { e ->
-                                if (isPortrait) e.copy(portraitLayout = forked.id) else e.copy(
-                                    landscapeLayout = forked.id
-                                )
+                        // Update editor state if the layout was changed
+                        LaunchedEffect(layout) {
+                            val currentEditorState = editorState
+                            if (currentEditorState != null) {
+                                currentEditorState.layout = layout
+                                currentEditorState.initialLayout = layout // Keep it synchronized if we ever add a option to revert changes without exiting
                             }
-                            layout = forked
                         }
+
                         val onFastForwardPress = { it: GamepadElement.FastForward ->
                             if (it.toggle && fastForwardActiveButtonId == it.id) {
                                 fastForwardActiveButtonId = null
@@ -290,8 +278,7 @@ class GameActivity : ComponentActivity() {
                             if (fastForwardActiveButtonId == null) {
                                 butterscotchRunner.fastForwardSpeed = 1.0f
                             } else {
-                                val element =
-                                    layout.elements.firstOrNull { it.id == fastForwardActiveButtonId } as GamepadElement.FastForward?
+                                val element = layout.elements.firstOrNull { it.id == fastForwardActiveButtonId } as GamepadElement.FastForward?
 
                                 if (element != null) {
                                     butterscotchRunner.fastForwardSpeed = element.speed
@@ -319,13 +306,8 @@ class GameActivity : ComponentActivity() {
                                     if (!freeCam.active) {
                                         GameControls(
                                             layout = layout,
-                                            editMode = editMode,
+                                            editModeState = editorState,
                                             activeFastForwardButtonId = fastForwardActiveButtonId,
-                                            onLayoutChange = { layout = it },
-                                            onExitEditMode = { editMode = false },
-                                            canSave = canSave,
-                                            onSave = onSave,
-                                            onSaveAs = onSaveAs,
                                             onMenuOpen = {
                                                 menuOpen = true
                                             },
@@ -360,13 +342,8 @@ class GameActivity : ComponentActivity() {
                                     if (!freeCam.active) {
                                         GameControls(
                                             layout = layout,
-                                            editMode = editMode,
+                                            editModeState = editorState,
                                             activeFastForwardButtonId = fastForwardActiveButtonId,
-                                            onLayoutChange = { layout = it },
-                                            onExitEditMode = { editMode = false },
-                                            canSave = canSave,
-                                            onSave = onSave,
-                                            onSaveAs = onSaveAs,
                                             onMenuOpen = {
                                                 menuOpen = true
                                             },
@@ -391,7 +368,9 @@ class GameActivity : ComponentActivity() {
                                 // This is blocking
                                 butterscotchRunner.requestExit()
                             },
-                            onEditLayout = { editMode = true },
+                            onEditLayout = {
+                                editorState = GamepadEditorState(keys, layout)
+                            },
                             onEnableFreeCam = {
                                 butterscotchRunner.freeCamera.update { it.copy(active = true) }
                             },
@@ -423,6 +402,36 @@ class GameActivity : ComponentActivity() {
                                 onCameraChange = { px, py, z -> butterscotchRunner.freeCamera.update { it.copy(panX = px, panY = py, zoom = z) } },
                                 // Reset everything (pan/zoom + active) to identity in one atomic assignment.
                                 onClose = { butterscotchRunner.freeCamera.value = ButterscotchDroidRunner.FreeCameraState() }
+                            )
+                        }
+
+                        val currentEditorState = editorState
+                        if (currentEditorState != null) {
+                            // Save only applies to user layouts; the built-in defaults are read-only.
+                            val canSave = layout.id != LayoutLibrary.DEFAULT_PORTRAIT_LAYOUT && layout.id != LayoutLibrary.DEFAULT_LANDSCAPE_LAYOUT
+                            val onSave = {
+                                layoutLibrary.upsert(currentEditorState.layout)
+                                layout = currentEditorState.layout
+                            }
+                            val onSaveAs = { name: String ->
+                                // Fork to a fresh id with the given name, persist it, and point this game's
+                                // orientation-specific layout at the copy so it loads next time. Keep editing it.
+                                val forked = currentEditorState.layout.copy(id = UUID.randomUUID(), fancyName = name)
+                                layoutLibrary.upsert(forked)
+                                gameLibrary.update(entry.id) { e ->
+                                    if (isPortrait) e.copy(portraitLayout = forked.id) else e.copy(
+                                        landscapeLayout = forked.id
+                                    )
+                                }
+                                layout = forked
+                            }
+
+                            GamepadEditorToolbar(
+                                currentEditorState,
+                                onExitEditMode = { editorState = null },
+                                canSave = canSave,
+                                onSave = onSave,
+                                onSaveAs = onSaveAs,
                             )
                         }
                     }

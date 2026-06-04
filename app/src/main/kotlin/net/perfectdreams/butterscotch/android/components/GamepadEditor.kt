@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraintsScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -39,14 +38,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import net.perfectdreams.butterscotch.android.VirtualKeyState
 import net.perfectdreams.butterscotch.android.layouts.Gamepad
 import net.perfectdreams.butterscotch.android.layouts.GamepadElement
-import net.perfectdreams.butterscotch.android.layouts.GamepadLayout
 import net.perfectdreams.butterscotch.android.layouts.GamepadStick
 import net.perfectdreams.butterscotch.android.layouts.GmlKey
 import net.perfectdreams.butterscotch.android.layouts.InputBinding
@@ -55,63 +51,157 @@ import java.util.UUID
 import kotlin.math.absoluteValue
 import kotlin.math.roundToInt
 
+@Composable
+fun BoxWithConstraintsScope.GamepadEditorToolbar(
+    state: GamepadEditorState,
+    onSave: () -> (Unit),
+    onSaveAs: (String) -> (Unit),
+    onExitEditMode: () -> (Unit),
+    canSave: Boolean
+) {
+    var showSaveAsDialog by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier.align(Alignment.TopCenter),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = "Edit mode - drag to move, long-press to edit",
+            color = Color.White,
+            style = TextStyle(fontSize = 13.sp)
+        )
+        Spacer(Modifier.height(8.dp))
+        // We use FlowRow instead of a normal row so that it behaves more like flex-wrap
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .padding(top = 16.dp)
+        ) {
+            Box {
+                var addMenuExpanded by remember { mutableStateOf(false) }
+                Button(onClick = { addMenuExpanded = true }) { Text("Add") }
+                DropdownMenu(
+                    expanded = addMenuExpanded,
+                    onDismissRequest = { addMenuExpanded = false }) {
+                    DropdownMenuItem(text = { Text("Button") }, onClick = {
+                        addMenuExpanded = false
+                        state.add(GamepadElement.Key(
+                            positionX = 0.5,
+                            positionY = 0.5,
+                            scale = 0.22,
+                            opacity = 1.0,
+                            label = null,
+                            trigger = KeyTrigger.Press,
+                            binding = InputBinding.Keyboard(GmlKey.Z.code),
+                            id = UUID.randomUUID()
+                        ))
+                    })
+                    DropdownMenuItem(text = { Text("Joystick") }, onClick = {
+                        addMenuExpanded = false
+                        state.add(GamepadElement.Joystick(
+                            positionX = 0.5,
+                            positionY = 0.5,
+                            scale = 0.42,
+                            opacity = 1.0,
+                            up = InputBinding.Keyboard(GmlKey.UP.code),
+                            down = InputBinding.Keyboard(GmlKey.DOWN.code),
+                            left = InputBinding.Keyboard(GmlKey.LEFT.code),
+                            right = InputBinding.Keyboard(GmlKey.RIGHT.code),
+                            id = UUID.randomUUID()
+                        ))
+                    })
+                    DropdownMenuItem(text = { Text("Gamepad Button") }, onClick = {
+                        addMenuExpanded = false
+                        state.add(GamepadElement.Key(
+                            positionX = 0.5,
+                            positionY = 0.5,
+                            scale = 0.22,
+                            opacity = 1.0,
+                            label = null,
+                            trigger = KeyTrigger.Press,
+                            binding = InputBinding.GamepadButton(device = 0, button = Gamepad.Button.FACE1.index),
+                            id = UUID.randomUUID()
+                        ))
+                    })
+                    DropdownMenuItem(text = { Text("Gamepad Joystick") }, onClick = {
+                        addMenuExpanded = false
+                        state.add(GamepadElement.AnalogJoystick(
+                            positionX = 0.5,
+                            positionY = 0.5,
+                            scale = 0.42,
+                            opacity = 1.0,
+                            stick = GamepadStick.LEFT,
+                            device = 0,
+                            id = UUID.randomUUID()
+                        ))
+                    })
+                    DropdownMenuItem(text = { Text("Menu") }, onClick = {
+                        addMenuExpanded = false
+                        state.add(GamepadElement.Menu(
+                            positionX = 0.5,
+                            positionY = 0.5,
+                            scale = 0.22,
+                            opacity = 1.0,
+                            id = UUID.randomUUID()
+                        ))
+                    })
+                    DropdownMenuItem(text = { Text("Fast Forward") }, onClick = {
+                        addMenuExpanded = false
+                        state.add(GamepadElement.FastForward(
+                            positionX = 0.5,
+                            positionY = 0.5,
+                            scale = 0.22,
+                            opacity = 1.0,
+                            id = UUID.randomUUID(),
+                            speed = 2.0f,
+                            toggle = true
+                        ))
+                    })
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            Button(onClick = { state.snapToGrid = !state.snapToGrid }) { Text(if (state.snapToGrid) "Grid: On" else "Grid: Off") }
+            Spacer(Modifier.height(8.dp))
+            Button(onClick = {
+                onSave()
+                onExitEditMode()
+            }, enabled = canSave) { Text("Save") }
+            Spacer(Modifier.height(8.dp))
+            Button(onClick = { showSaveAsDialog = true }) { Text("Save As") }
+            Spacer(Modifier.height(8.dp))
+            Button(onClick = {
+                state.reset()
+                onExitEditMode()
+            }) { Text("Discard Changes") }
+        }
+    }
+
+    if (showSaveAsDialog) {
+        SaveAsLayoutDialog(
+            initialName = state.layout.fancyName,
+            onConfirm = { name ->
+                showSaveAsDialog = false
+                onSaveAs(name)
+                onExitEditMode()
+            },
+            onDismiss = { showSaveAsDialog = false }
+        )
+    }
+}
+
 // The editor: every element becomes a draggable / long-pressable stand-in, plus a toolbar (add /
 // save / save as) and the per-element + "save as" dialogs. Elements are addressed by their stable
 // [GamepadElement.id], never by list index, so adding or deleting one can never make an in-flight
 // drag or open dialog point at the wrong element.
 @Composable
-fun BoxWithConstraintsScope.GamepadEditor(
-    layout: GamepadLayout,
-    keys: VirtualKeyState,
-    onLayoutChange: (GamepadLayout) -> Unit,
-    onExitEditMode: () -> Unit,
-    canSave: Boolean,
-    onSave: () -> Unit,
-    onSaveAs: (String) -> Unit
-) {
-    // Id of the element whose editor dialog is open, or null.
-    var editingId by remember { mutableStateOf<UUID?>(null) }
-    var showSaveAsDialog by remember { mutableStateOf(false) }
-
-    // When on, draws the placement grid and snaps a dragged element's center to the nearest grid intersection.
-    var snapToGrid by remember { mutableStateOf(false) }
-
-    // Snapshot of the layout as it was when the editor opened, so "Discard Changes" can push the  pre-edit state back.
-    val initialLayout = remember(layout.id) { layout }
-
+fun BoxWithConstraintsScope.GamepadEditor(state: GamepadEditorState) {
     // Container size in pixels, used to convert drag deltas (px) into 0..1 position fractions.
     val widthPx = constraints.maxWidth.toFloat()
     val heightPx = constraints.maxHeight.toFloat()
 
-    // A pointerInput block captures its surroundings once (it is not re-keyed on every layout edit),
-    // so reads inside the drag handler must go through these always-latest snapshots rather than the
-    // captured-at-launch parameters, or mid-drag reads would be stale.
-    val currentLayout by rememberUpdatedState(layout)
-    val currentOnChange by rememberUpdatedState(onLayoutChange)
-    // Same reason: the drag handler reads the toggle live rather than the value captured when it launched.
-    val currentSnap by rememberUpdatedState(snapToGrid)
-
-    // Replace the element sharing [element]'s id with the new value, leaving the list order intact.
-    fun update(element: GamepadElement) {
-        val l = currentLayout
-        currentOnChange(l.copy(elements = l.elements.map { if (it.id == element.id) element else it }))
-    }
-
-    fun delete(id: UUID) {
-        val l = currentLayout
-        currentOnChange(l.copy(elements = l.elements.filter { it.id != id }))
-        editingId = null
-    }
-
-    // Append a freshly-built element at the overlay center and open its editor straight away.
-    fun add(element: GamepadElement) {
-        val l = currentLayout
-        currentOnChange(l.copy(elements = l.elements + element))
-        editingId = element.id
-    }
-
     // Grid lines sit behind every element. The cell is a square sized off the shorter side (same reference placementOf uses), then tiled across both axes so cells stay square on any aspect ratio instead of stretching into rectangles. Drawn at the same pixel step the snap rounds to, so a snapped element lands on the intersection it shows.
-    if (snapToGrid) {
+    if (state.snapToGrid) {
         Canvas(Modifier.matchParentSize()) {
             val cell = minOf(size.width, size.height) / GRID_DIVISIONS
             var x = cell
@@ -127,7 +217,7 @@ fun BoxWithConstraintsScope.GamepadEditor(
         }
     }
 
-    layout.elements.forEach { element ->
+    state.layout.elements.forEach { element ->
         // Two gesture detectors on the same element: drag moves it (immediately), a long press with no movement opens its editor.
         // Movement past touch slop cancels the long press, so the two do not fight.
         val editModifier = placementOf(element)
@@ -139,29 +229,29 @@ fun BoxWithConstraintsScope.GamepadEditor(
                 var py = 0.0
                 detectDragGestures(
                     onDragStart = {
-                        currentLayout.elements.firstOrNull { it.id == element.id }?.let {
+                        state.layout.elements.firstOrNull { it.id == element.id }?.let {
                             px = it.positionX
                             py = it.positionY
                         }
                     },
                     onDrag = { change, dragAmount ->
                         change.consume()
-                        val el = currentLayout.elements.firstOrNull { it.id == element.id }
+                        val el = state.layout.elements.firstOrNull { it.id == element.id }
                         if (el != null) {
                             px = (px + dragAmount.x / widthPx).coerceIn(0.0, 1.0)
                             py = (py + dragAmount.y / heightPx).coerceIn(0.0, 1.0)
                             // Snapping rounds only what we commit to the model; px/py keep the raw position so the snap does not fight continued dragging.
                             // The cell is square (sized off the shorter side), so each axis snaps in pixel space rather than to a fraction of its own length.
-                            if (currentSnap) {
+                            if (state.snapToGrid) {
                                 val cellPx = minOf(widthPx, heightPx) / GRID_DIVISIONS
-                                update(el.movedTo(snapFraction(px, widthPx, cellPx), snapFraction(py, heightPx, cellPx)))
-                            } else update(el.movedTo(px, py))
+                                state.update(el.movedTo(snapFraction(px, widthPx, cellPx), snapFraction(py, heightPx, cellPx)))
+                            } else state.update(el.movedTo(px, py))
                         }
                     }
                 )
             }
             .pointerInput(element.id) {
-                detectTapGestures(onLongPress = { editingId = element.id })
+                detectTapGestures(onLongPress = { state.editingId = element.id })
             }
 
         when (element) {
@@ -170,7 +260,7 @@ fun BoxWithConstraintsScope.GamepadEditor(
                 down = element.down,
                 left = element.left,
                 right = element.right,
-                keys = keys,
+                keys = state.keys,
                 interactive = false,
                 modifier = editModifier
             )
@@ -178,7 +268,7 @@ fun BoxWithConstraintsScope.GamepadEditor(
             is GamepadElement.AnalogJoystick -> AnalogJoystick(
                 stick = element.stick,
                 device = element.device,
-                keys = keys,
+                keys = state.keys,
                 interactive = false,
                 modifier = editModifier
             )
@@ -188,7 +278,7 @@ fun BoxWithConstraintsScope.GamepadEditor(
                     defaultLabelFor(element.binding),
                     element.binding,
                     element.trigger,
-                    keys,
+                    state.keys,
                     false,
                     editModifier
                 )
@@ -210,146 +300,17 @@ fun BoxWithConstraintsScope.GamepadEditor(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .align(Alignment.TopCenter),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = "Edit mode - drag to move, long-press to edit",
-            color = Color.White,
-            style = TextStyle(fontSize = 13.sp)
-        )
-        Spacer(Modifier.height(8.dp))
-        // We use FlowRow instead of a normal row so that it behaves more like flex-wrap
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            modifier = Modifier
-            .align(Alignment.CenterHorizontally)
-            .padding(top = 16.dp)
-        ) {
-            Box {
-                var addMenuExpanded by remember { mutableStateOf(false) }
-                Button(onClick = { addMenuExpanded = true }) { Text("Add") }
-                DropdownMenu(
-                    expanded = addMenuExpanded,
-                    onDismissRequest = { addMenuExpanded = false }) {
-                    DropdownMenuItem(text = { Text("Button") }, onClick = {
-                        addMenuExpanded = false
-                        add(GamepadElement.Key(
-                            positionX = 0.5,
-                            positionY = 0.5,
-                            scale = 0.22,
-                            opacity = 1.0,
-                            label = null,
-                            trigger = KeyTrigger.Press,
-                            binding = InputBinding.Keyboard(GmlKey.Z.code),
-                            id = UUID.randomUUID()
-                        ))
-                    })
-                    DropdownMenuItem(text = { Text("Joystick") }, onClick = {
-                        addMenuExpanded = false
-                        add(GamepadElement.Joystick(
-                            positionX = 0.5,
-                            positionY = 0.5,
-                            scale = 0.42,
-                            opacity = 1.0,
-                            up = InputBinding.Keyboard(GmlKey.UP.code),
-                            down = InputBinding.Keyboard(GmlKey.DOWN.code),
-                            left = InputBinding.Keyboard(GmlKey.LEFT.code),
-                            right = InputBinding.Keyboard(GmlKey.RIGHT.code),
-                            id = UUID.randomUUID()
-                        ))
-                    })
-                    DropdownMenuItem(text = { Text("Gamepad Button") }, onClick = {
-                        addMenuExpanded = false
-                        add(GamepadElement.Key(
-                            positionX = 0.5,
-                            positionY = 0.5,
-                            scale = 0.22,
-                            opacity = 1.0,
-                            label = null,
-                            trigger = KeyTrigger.Press,
-                            binding = InputBinding.GamepadButton(device = 0, button = Gamepad.Button.FACE1.index),
-                            id = UUID.randomUUID()
-                        ))
-                    })
-                    DropdownMenuItem(text = { Text("Gamepad Joystick") }, onClick = {
-                        addMenuExpanded = false
-                        add(GamepadElement.AnalogJoystick(
-                            positionX = 0.5,
-                            positionY = 0.5,
-                            scale = 0.42,
-                            opacity = 1.0,
-                            stick = GamepadStick.LEFT,
-                            device = 0,
-                            id = UUID.randomUUID()
-                        ))
-                    })
-                    DropdownMenuItem(text = { Text("Menu") }, onClick = {
-                        addMenuExpanded = false
-                        add(GamepadElement.Menu(
-                            positionX = 0.5,
-                            positionY = 0.5,
-                            scale = 0.22,
-                            opacity = 1.0,
-                            id = UUID.randomUUID()
-                        ))
-                    })
-                    DropdownMenuItem(text = { Text("Fast Forward") }, onClick = {
-                        addMenuExpanded = false
-                        add(GamepadElement.FastForward(
-                            positionX = 0.5,
-                            positionY = 0.5,
-                            scale = 0.22,
-                            opacity = 1.0,
-                            id = UUID.randomUUID(),
-                            speed = 2.0f,
-                            toggle = true
-                        ))
-                    })
-                }
-            }
-            Spacer(Modifier.height(8.dp))
-            Button(onClick = { snapToGrid = !snapToGrid }) { Text(if (snapToGrid) "Grid: On" else "Grid: Off") }
-            Spacer(Modifier.height(8.dp))
-            Button(onClick = {
-                onSave()
-                onExitEditMode()
-            }, enabled = canSave) { Text("Save") }
-            Spacer(Modifier.height(8.dp))
-            Button(onClick = { showSaveAsDialog = true }) { Text("Save As") }
-            Spacer(Modifier.height(8.dp))
-            Button(onClick = {
-                onLayoutChange(initialLayout)
-                onExitEditMode()
-            }) { Text("Discard Changes") }
-        }
-    }
-
     // key(editing.id) so the dialog's internal field state resets when a different element is picked.
-    val editing = editingId?.let { id -> layout.elements.firstOrNull { it.id == id } }
+    val editing = state.editingId?.let { id -> state.layout.elements.firstOrNull { it.id == id } }
     if (editing != null) {
         key(editing.id) {
             ElementEditDialog(
                 element = editing,
-                onChange = { update(it) },
-                onDelete = { delete(editing.id) },
-                onDismiss = { editingId = null }
+                onChange = { state.update(it) },
+                onDelete = { state.delete(editing.id) },
+                onDismiss = { state.editingId = null }
             )
         }
-    }
-
-    if (showSaveAsDialog) {
-        SaveAsLayoutDialog(
-            initialName = layout.fancyName,
-            onConfirm = { name ->
-                showSaveAsDialog = false
-                onSaveAs(name)
-                onExitEditMode()
-            },
-            onDismiss = { showSaveAsDialog = false }
-        )
     }
 }
 
