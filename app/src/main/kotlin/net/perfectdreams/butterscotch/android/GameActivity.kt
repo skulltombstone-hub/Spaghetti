@@ -49,6 +49,7 @@ import net.perfectdreams.butterscotch.android.components.GamepadEditorToolbar
 import net.perfectdreams.butterscotch.android.components.MenuOverlay
 import net.perfectdreams.butterscotch.android.layouts.GamepadElement
 import net.perfectdreams.butterscotch.android.layouts.GamepadLayout
+import net.perfectdreams.butterscotch.android.layouts.GmlMouseButton
 import net.perfectdreams.butterscotch.android.layouts.LayoutLibrary
 import net.perfectdreams.butterscotch.android.library.GameLibrary
 import net.perfectdreams.butterscotch.android.theme.ButterscotchAndroidTheme
@@ -185,7 +186,7 @@ class GameActivity : ComponentActivity() {
 
                                         for (change in event.changes) {
                                             if (change.pressed != change.previousPressed) {
-                                                butterscotchRunner.onMouseButton(1, change.pressed)
+                                                butterscotchRunner.onMouseButton(GmlMouseButton.RIGHT_BUTTON, change.pressed)
                                             }
 
                                             val position = change.position

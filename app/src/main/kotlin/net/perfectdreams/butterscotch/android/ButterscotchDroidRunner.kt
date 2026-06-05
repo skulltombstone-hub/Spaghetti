@@ -17,6 +17,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
+import net.perfectdreams.butterscotch.android.layouts.GmlMouseButton
 import java.util.concurrent.Executors
 
 // The Butterscotch Android API is actually "global bound", but we use a class to help managing things here (and will be useful if we refactor down the road)
@@ -196,7 +197,7 @@ class ButterscotchDroidRunner(val dataWinPath: String, val savesPath: String, va
         data class Key(val code: Int, val isDown: Boolean) : InputEvent
         data class Char(val codePoint: Int) : InputEvent
         data class MousePosition(val x: Float, val y: Float) : InputEvent
-        data class MouseButton(val button: Int, val isDown: Boolean) : InputEvent
+        data class MouseButton(val button: GmlMouseButton, val isDown: Boolean) : InputEvent
         data class GamepadButton(val device: Int, val button: Int, val isDown: Boolean) : InputEvent
         data class GamepadAxis(val device: Int, val axis: Int, val value: Float) : InputEvent
         data class GamepadConnected(val device: Int, val name: String?) : InputEvent
@@ -245,7 +246,7 @@ class ButterscotchDroidRunner(val dataWinPath: String, val savesPath: String, va
         inputChannel.trySend(InputEvent.MousePosition(x, y))
     }
 
-    fun onMouseButton(button: Int, isDown: Boolean) {
+    fun onMouseButton(button: GmlMouseButton, isDown: Boolean) {
         inputChannel.trySend(InputEvent.MouseButton(button, isDown))
     }
 
@@ -265,7 +266,7 @@ class ButterscotchDroidRunner(val dataWinPath: String, val savesPath: String, va
                 is InputEvent.GamepadConnected -> ButterscotchNative.gamepadConnected(event.device, event.name)
                 is InputEvent.GamepadDisconnected -> ButterscotchNative.gamepadDisconnected(event.device)
                 is InputEvent.MousePosition -> ButterscotchNative.setNormalizedCursorPosition(event.x, event.y)
-                is InputEvent.MouseButton -> ButterscotchNative.setMouseButtonState(event.button, event.isDown)
+                is InputEvent.MouseButton -> ButterscotchNative.setMouseButtonState(event.button.id, event.isDown)
             }
         }
     }
