@@ -182,12 +182,19 @@ class GameActivity : ComponentActivity() {
                                 awaitPointerEventScope {
                                     while (true) {
                                         val event = awaitPointerEvent()
-                                        val position = event.changes.first().position
 
-                                        val fractionX = position.x / size.width
-                                        val fractionY = position.y / size.height
+                                        for (change in event.changes) {
+                                            if (change.pressed != change.previousPressed) {
+                                                butterscotchRunner.onMouseButton(1, change.pressed)
+                                            }
 
-                                        ButterscotchNative.setNormalizedCursorPosition(fractionX, fractionY)
+                                            val position = change.position
+
+                                            val fractionX = position.x / size.width
+                                            val fractionY = position.y / size.height
+
+                                            butterscotchRunner.onMouseMove(fractionX, fractionY)
+                                        }
                                     }
                                 }
                             },
