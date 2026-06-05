@@ -94,6 +94,15 @@ fun LauncherScreen(
                         onDismissRequest = { menuExpanded = false },
                     ) {
                         DropdownMenuItem(
+                            leadingIcon = { Icon(Icons.Filled.Settings, contentDescription = null) },
+                            text = { Text("Settings") },
+                            onClick = {
+                                menuExpanded = false
+                                nav.navigate(Route.GeneralSettings)
+                            },
+                        )
+
+                        DropdownMenuItem(
                             leadingIcon = { Icon(painterResource(R.drawable.discord), contentDescription = null, modifier = Modifier.size(24.dp)) },
                             text = { Text("Discord Community") },
                             onClick = {

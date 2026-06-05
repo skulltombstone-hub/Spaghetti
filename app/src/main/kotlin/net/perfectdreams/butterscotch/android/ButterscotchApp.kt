@@ -11,6 +11,7 @@ import net.perfectdreams.butterscotch.android.layouts.LayoutLibrary
 import net.perfectdreams.butterscotch.android.library.GameLibrary
 import net.perfectdreams.butterscotch.android.screens.AboutScreen
 import net.perfectdreams.butterscotch.android.screens.GameMetadataScreen
+import net.perfectdreams.butterscotch.android.screens.GeneralSettingsScreen
 import net.perfectdreams.butterscotch.android.screens.ImportScreen
 import net.perfectdreams.butterscotch.android.screens.LauncherScreen
 import net.perfectdreams.butterscotch.android.screens.LicensesScreen
@@ -50,6 +51,9 @@ fun ButterscotchApp(gameLibrary: GameLibrary, layoutLibrary: LayoutLibrary) {
         }
         composable<Route.Licenses> {
             LicensesScreen(nav = nav)
+        }
+        composable<Route.GeneralSettings> {
+            GeneralSettingsScreen(gameLibrary = gameLibrary, layoutLibrary = layoutLibrary, nav = nav)
         }
         composable<Route.GameSettings> { backStackEntry ->
             val args = backStackEntry.toRoute<Route.GameSettings>()
