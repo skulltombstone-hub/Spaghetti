@@ -40,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.viewinterop.AndroidView
 import net.perfectdreams.butterscotch.android.components.FreeCameraOverlay
@@ -124,6 +125,7 @@ class GameActivity : ComponentActivity() {
         ButterscotchNative.resetExitLatch()
 
         val butterscotchRunner = ButterscotchDroidRunner(
+            this.assets,
             wadFile.absolutePath,
             savesDir.absolutePath,
             entry.runnerOs.nativeValue,

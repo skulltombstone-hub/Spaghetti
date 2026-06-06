@@ -1,7 +1,12 @@
 package net.perfectdreams.butterscotch.android
 
+import android.content.res.AssetManager
+import android.content.res.Resources
+import android.opengl.GLES20
+import android.opengl.GLES30
 import android.util.Log
 import android.view.Surface
+import androidx.compose.runtime.remember
 import androidx.compose.ui.unit.IntSize
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -18,10 +23,13 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
 import net.perfectdreams.butterscotch.android.layouts.GmlMouseButton
+import net.perfectdreams.butterscotch.android.shaders.BlitShader
+import net.perfectdreams.harmony.gl.shaders.ShaderManager
+import net.perfectdreams.harmony.gl.shaders.bind
 import java.util.concurrent.Executors
 
 // The Butterscotch Android API is actually "global bound", but we use a class to help managing things here (and will be useful if we refactor down the road)
-class ButterscotchDroidRunner(val dataWinPath: String, val savesPath: String, val osType: Int, val enablePhysicalControllers: Boolean, val enablePhysicalKeyboard: Boolean, var enableWidescreenHack: Boolean) {
+class ButterscotchDroidRunner(val assets: AssetManager, val dataWinPath: String, val savesPath: String, val osType: Int, val enablePhysicalControllers: Boolean, val enablePhysicalKeyboard: Boolean, var enableWidescreenHack: Boolean) {
     companion object {
         private const val TAG = "ButterscotchRenderLoop"
 
@@ -35,12 +43,19 @@ class ButterscotchDroidRunner(val dataWinPath: String, val savesPath: String, va
     private var runnerStarted = false
     private var started = false
     var paused = MutableStateFlow(false)
-    private val inputChannel = Channel<InputEvent>(capacity = 256, onBufferOverflow = BufferOverflow.DROP_OLDEST,)
+    private val inputChannel = Channel<InputEvent>(
+        capacity = 256,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
     val gamepadRouter = GamepadRouter(this)
     val keyboardRouter = KeyboardRouter(this)
     var fastForwardSpeed = 1.0f
     var surfaceSize = IntSize.Zero
     val freeCamera = MutableStateFlow(FreeCameraState())
+    var fboId: Int = 0
+    var blitTextureId: Int = 0
+    val shaderManager = ShaderManager()
+    lateinit var blitShader: BlitShader
 
     data class FreeCameraState(
         val active: Boolean = false,
@@ -77,7 +92,10 @@ class ButterscotchDroidRunner(val dataWinPath: String, val savesPath: String, va
                 if (!runnerStarted) {
                     // We only start the runner here because we NEED to have an EGL context, because the GLRenderer needs it on glInit
                     Log.i(TAG, "Starting runner...")
-                    ButterscotchNative.startRunner(dataWinPath, savesPath, osType, 0)
+
+                    prepare()
+
+                    ButterscotchNative.startRunner(dataWinPath, savesPath, osType, this@ButterscotchDroidRunner.fboId)
                     runnerStarted = true
                 }
 
@@ -113,8 +131,28 @@ class ButterscotchDroidRunner(val dataWinPath: String, val savesPath: String, va
                     when (stepStatus) {
                         ButterscotchNative.BUTTERSCOTCH_DROID_CONTINUE,
                         ButterscotchNative.BUTTERSCOTCH_DROID_CONTINUE_NO_SWAP -> {
-                            if (stepStatus == ButterscotchNative.BUTTERSCOTCH_DROID_CONTINUE)
+                            if (stepStatus == ButterscotchNative.BUTTERSCOTCH_DROID_CONTINUE) {
+                                // Blit the runner's framebuffer to the screen, where we can apply post-processing shaders & stuffz
+                                GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0)
+                                GLES20.glViewport(0, 0, egl.width, egl.height)
+
+                                // The runner enables blending and scissor once and expects that global state to persist across frames, so save what we toggle here and restore it after the blit, otherwise transparent sprites break
+                                val blendWasEnabled = GLES20.glIsEnabled(GLES20.GL_BLEND)
+                                val scissorWasEnabled = GLES20.glIsEnabled(GLES20.GL_SCISSOR_TEST)
+                                GLES20.glDisable(GLES20.GL_BLEND)
+                                GLES20.glDisable(GLES20.GL_SCISSOR_TEST)
+
+                                GLES30.glBindVertexArray(0)
+                                blitShader.bind {
+                                    uTexture.set(GLES20.GL_TEXTURE0, this@ButterscotchDroidRunner.blitTextureId)
+                                }
+                                GLES30.glDrawArrays(GLES30.GL_TRIANGLES, 0, 3)
+
+                                if (blendWasEnabled) GLES20.glEnable(GLES20.GL_BLEND)
+                                if (scissorWasEnabled) GLES20.glEnable(GLES20.GL_SCISSOR_TEST)
+
                                 egl.swapBuffers()
+                            }
 
                             val hz = (ButterscotchNative.getTargetFrameHz() * this@ButterscotchDroidRunner.fastForwardSpeed).toLong()
                             if (hz > 0) {
@@ -269,5 +307,30 @@ class ButterscotchDroidRunner(val dataWinPath: String, val savesPath: String, va
                 is InputEvent.MouseButton -> ButterscotchNative.setMouseButtonState(event.button.id, event.isDown)
             }
         }
+    }
+
+    fun prepare() {
+        val textures = IntArray(1)
+        GLES20.glGenTextures(1, textures, 0)
+        blitTextureId = textures[0]
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, blitTextureId)
+        GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0, GLES20.GL_RGBA, egl.width, egl.height, 0, GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, null)
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR)
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR)
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE)
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE)
+
+        val framebuffers = IntArray(1)
+        GLES20.glGenFramebuffers(1, framebuffers, 0)
+        fboId = framebuffers[0]
+        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, fboId)
+        GLES20.glFramebufferTexture2D(GLES20.GL_FRAMEBUFFER, GLES20.GL_COLOR_ATTACHMENT0, GLES20.GL_TEXTURE_2D, blitTextureId, 0)
+
+        val status = GLES20.glCheckFramebufferStatus(GLES20.GL_FRAMEBUFFER)
+        check(status == GLES20.GL_FRAMEBUFFER_COMPLETE) { "Framebuffer is not complete! Status is $status" }
+
+        val blitVertexShader = assets.open("shaders/blit.vsh").readBytes().toString(Charsets.UTF_8)
+        val blitFragmentShader = assets.open("shaders/blit.fsh").readBytes().toString(Charsets.UTF_8)
+        blitShader = shaderManager.loadShader(blitVertexShader, blitFragmentShader) { BlitShader(it) }
     }
 }
