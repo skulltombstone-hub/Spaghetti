@@ -107,10 +107,14 @@ class ButterscotchDroidRunner(val assets: AssetManager, val dataWinPath: String,
                 // starting a whole new render loop :3
                 while (isActive && egl.hasSurface) {
                     if (this@ButterscotchDroidRunner.paused.value) {
+                        // Silence audio while paused
+                        ButterscotchNative.suspendAudio()
                         this@ButterscotchDroidRunner.paused.first { !it } // Wait until we are NOT paused
                         // Reset the frame clock so resuming doesn't inject a giant delta_time spike
                         lastFrameStartNs = System.nanoTime()
                     }
+
+                    ButterscotchNative.resumeAudio()
 
                     val freeCam = this@ButterscotchDroidRunner.freeCamera.value
 
@@ -190,6 +194,7 @@ class ButterscotchDroidRunner(val assets: AssetManager, val dataWinPath: String,
                 }
             } finally {
                 egl.unbindWindow()
+                ButterscotchNative.suspendAudio()
             }
         }
     }

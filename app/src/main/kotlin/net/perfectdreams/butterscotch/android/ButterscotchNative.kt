@@ -132,6 +132,16 @@ object ButterscotchNative {
     /** Tear down runner/renderer/audio. */
     external fun stopRunner()
 
+    /**
+     * Suspend the audio backend (stops the audio device) without tearing the runner down. Used when the
+     * app is backgrounded: the audio device mixes on its own thread, so parking the render loop alone
+     * would not silence it. Render thread only, same threading rules as [stopRunner].
+     */
+    external fun suspendAudio()
+
+    /** Resume the audio backend after [suspendAudio]. Render thread only. */
+    external fun resumeAudio()
+
     external fun getRoomCount(): Int
     external fun getRoomName(roomIndex: Int): String
     external fun gotoRoom(roomIndex: Int)
