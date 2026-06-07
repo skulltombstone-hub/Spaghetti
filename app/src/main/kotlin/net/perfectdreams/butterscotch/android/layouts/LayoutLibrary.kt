@@ -1,9 +1,12 @@
 package net.perfectdreams.butterscotch.android.layouts
 
 import android.content.Context
+import android.content.res.AssetManager
 import android.util.Log
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import io.ktor.http.DEFAULT_PORT
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
@@ -43,46 +46,22 @@ class LayoutLibrary private constructor(
 
             // To avoid upgrading issues, we WON'T persist the default gamepads on the config
             val realInitial = mutableListOf(
-                GamepadLayout(
-                    id = DEFAULT_LANDSCAPE_LAYOUT,
-                    fancyName = "Default Landscape",
-                    orientation = GamepadLayout.GamepadTargetOrientation.LANDSCAPE,
-                    elements = listOf(
-                        GamepadElement.Joystick(
-                            positionX = 0.16, positionY = 0.74, scale = 0.42, opacity = 1.0,
-                            up = InputBinding.Keyboard(GmlKey.UP.code),
-                            down = InputBinding.Keyboard(GmlKey.DOWN.code),
-                            left = InputBinding.Keyboard(GmlKey.LEFT.code),
-                            right = InputBinding.Keyboard(GmlKey.RIGHT.code),
-                            id = UUID.randomUUID()
-                        ),
-                        GamepadElement.Key(positionX = 0.66, positionY = 0.78, scale = 0.22, opacity = 1.0, label = null, trigger = KeyTrigger.Press, binding = InputBinding.Keyboard(GmlKey.C.code), id = UUID.randomUUID()),
-                        GamepadElement.Key(positionX = 0.79, positionY = 0.78, scale = 0.22, opacity = 1.0, label = null, trigger = KeyTrigger.Press, binding = InputBinding.Keyboard(GmlKey.X.code), id = UUID.randomUUID()),
-                        GamepadElement.Key(positionX = 0.92, positionY = 0.78, scale = 0.22, opacity = 1.0, label = null, trigger = KeyTrigger.Press, binding = InputBinding.Keyboard(GmlKey.Z.code), id = UUID.randomUUID()),
-                        GamepadElement.Menu(positionX = 0.94, positionY = 0.10, scale = 0.14, opacity = 1.0, id = UUID.randomUUID()),
-                    )
-                ),
-                GamepadLayout(
-                    id = DEFAULT_PORTRAIT_LAYOUT,
-                    fancyName = "Default Portrait",
-                    orientation = GamepadLayout.GamepadTargetOrientation.PORTRAIT,
-                    // Portrait is narrow, so the action buttons stack vertically on the right
-                    // (Z bottommost = primary, where the thumb rests) instead of in a row.
-                    elements = listOf(
-                        GamepadElement.Joystick(
-                            positionX = 0.25, positionY = 0.85, scale = 0.42, opacity = 1.0,
-                            up = InputBinding.Keyboard(GmlKey.UP.code),
-                            down = InputBinding.Keyboard(GmlKey.DOWN.code),
-                            left = InputBinding.Keyboard(GmlKey.LEFT.code),
-                            right = InputBinding.Keyboard(GmlKey.RIGHT.code),
-                            id = UUID.randomUUID()
-                        ),
-                        GamepadElement.Key(positionX = 0.82, positionY = 0.56, scale = 0.20, opacity = 1.0, label = null, trigger = KeyTrigger.Press, binding = InputBinding.Keyboard(GmlKey.C.code), id = UUID.randomUUID()),
-                        GamepadElement.Key(positionX = 0.82, positionY = 0.70, scale = 0.20, opacity = 1.0, label = null, trigger = KeyTrigger.Press, binding = InputBinding.Keyboard(GmlKey.X.code), id = UUID.randomUUID()),
-                        GamepadElement.Key(positionX = 0.82, positionY = 0.84, scale = 0.20, opacity = 1.0, label = null, trigger = KeyTrigger.Press, binding = InputBinding.Keyboard(GmlKey.Z.code), id = UUID.randomUUID()),
-                        GamepadElement.Menu(positionX = 0.92, positionY = 0.95, scale = 0.14, opacity = 1.0, id = UUID.randomUUID()),
-                    )
-                )
+                context.assets.open("layouts/default_portrait.json").readBytes().toString(Charsets.UTF_8)
+                    .let {
+                        Json.decodeFromString<GamepadLayout>(it)
+                            .copy(
+                                id = DEFAULT_PORTRAIT_LAYOUT,
+                                fancyName = "Default Portrait",
+                            )
+                    },
+                context.assets.open("layouts/default_landscape.json").readBytes().toString(Charsets.UTF_8)
+                    .let {
+                        Json.decodeFromString<GamepadLayout>(it)
+                            .copy(
+                                id = DEFAULT_LANDSCAPE_LAYOUT,
+                                fancyName = "Default Landscape",
+                            )
+                    }
             )
 
             realInitial.addAll(initial)
