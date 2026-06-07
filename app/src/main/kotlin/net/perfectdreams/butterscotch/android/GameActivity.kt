@@ -200,7 +200,7 @@ class GameActivity : ComponentActivity() {
 
                                         for (change in event.changes) {
                                             if (change.pressed != change.previousPressed) {
-                                                butterscotchRunner.onMouseButton(GmlMouseButton.RIGHT_BUTTON, change.pressed)
+                                                butterscotchRunner.onMouseButton(GmlMouseButton.LEFT_BUTTON, change.pressed)
                                             }
 
                                             val position = change.position
