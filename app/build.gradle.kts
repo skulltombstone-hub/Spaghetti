@@ -71,7 +71,7 @@ android {
         release {
             buildConfigField("boolean", "FORCE_BUTTERSCOTCH_PLUS", "false")
             buildConfigField("String", "API_BASE_URL", "\"https://butterscotch.perfectdreams.net\"")
-            buildConfigField("String", "API_VERSION", "1")
+            buildConfigField("String", "API_VERSION", "\"v1\"")
 
             isMinifyEnabled = true
             isShrinkResources = true
@@ -90,7 +90,7 @@ android {
         debug {
             buildConfigField("boolean", "FORCE_BUTTERSCOTCH_PLUS", "false")
             buildConfigField("String", "API_BASE_URL", "\"http://192.168.15.125:8080\"")
-            buildConfigField("String", "API_VERSION", "1")
+            buildConfigField("String", "API_VERSION", "\"v1\"")
         }
     }
     compileOptions {

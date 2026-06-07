@@ -151,25 +151,27 @@ private fun LayoutTile(
             }
 
             // The menu must live in the same Box as its anchor, otherwise the popup spawns at the row's origin
-            Box {
-                IconButton(onClick = { menuOpen = true }) {
-                    Icon(Icons.Filled.MoreVert, contentDescription = "Manage layout")
-                }
-                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                    // Built-in defaults are re-seeded every load, so they can't be renamed or deleted
-                    DropdownMenuItem(
-                        text = { Text("Rename") },
-                        leadingIcon = { Icon(Icons.Filled.Edit, contentDescription = null) },
-                        enabled = !builtIn,
-                        onClick = { menuOpen = false; onRename() },
-                    )
-                    DropdownMenuItem(
-                        // Only force the error color while enabled; a disabled item should use the default grayed look
-                        text = { Text("Delete", color = if (builtIn) Color.Unspecified else MaterialTheme.colorScheme.error) },
-                        leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null, tint = if (builtIn) Color.Unspecified else MaterialTheme.colorScheme.error) },
-                        enabled = !builtIn,
-                        onClick = { menuOpen = false; onDelete() },
-                    )
+            if (!builtIn) {
+                Box {
+                    IconButton(onClick = { menuOpen = true }) {
+                        Icon(Icons.Filled.MoreVert, contentDescription = "Manage layout")
+                    }
+                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        // Built-in defaults are re-seeded every load, so they can't be renamed or deleted
+                        DropdownMenuItem(
+                            text = { Text("Rename") },
+                            leadingIcon = { Icon(Icons.Filled.Edit, contentDescription = null) },
+                            enabled = true,
+                            onClick = { menuOpen = false; onRename() },
+                        )
+                        DropdownMenuItem(
+                            // Only force the error color while enabled; a disabled item should use the default grayed look
+                            text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
+                            leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null, tint = if (builtIn) Color.Unspecified else MaterialTheme.colorScheme.error) },
+                            enabled = true,
+                            onClick = { menuOpen = false; onDelete() },
+                        )
+                    }
                 }
             }
         }
