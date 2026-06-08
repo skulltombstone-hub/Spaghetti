@@ -365,13 +365,20 @@ class GameActivity : ComponentActivity() {
                         when (layoutMode) {
                             LayoutMode.Overlay -> {
                                 Box(Modifier.fillMaxSize()) {
-                                    val gameSurfaceModifier = if (freeCam.active || widescreenHackEnabled) {
+                                    val gameSurfaceModifier = if (freeCam.active || widescreenHackEnabled)
                                         Modifier.fillMaxSize() // Fill the whole screen!
-                                    } else {
-                                        (if (deviceAspect > contentAspect) Modifier.fillMaxHeight() else Modifier.fillMaxWidth())
+                                    else
+                                        Modifier
                                             .aspectRatio(contentAspect)
+                                            .let {
+                                                if (contentAspect >= 1.0) {
+                                                    it.fillMaxWidth()
+                                                } else {
+                                                    it.fillMaxHeight()
+                                                }
+                                            }
                                             .align(Alignment.Center)
-                                    }
+
                                     gameSurface(gameSurfaceModifier)
                                     if (!freeCam.active) {
                                         GameControls(
