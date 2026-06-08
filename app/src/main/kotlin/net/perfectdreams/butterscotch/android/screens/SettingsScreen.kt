@@ -44,7 +44,7 @@ import net.perfectdreams.butterscotch.android.shortcuts.requestPinGameShortcut
 import java.util.UUID
 
 /**
- * Per-game settings screen. Lives under [net.perfectdreams.butterscotch.android.Route.GameSettings] in the nav graph. Rows route to
+ * Per-game settings screen. Lives under [net.perfectdreams.butterscotch.android.Route.GameOverview] in the nav graph. Rows route to
  * sub-screens (metadata, save slots) or trigger destructive actions (delete).
  *
  * Pops itself via [onDone] when the user backs out OR after a successful delete. If the entry is
@@ -74,16 +74,16 @@ fun SettingsScreen(
         LazyColumn(
             Modifier.fillMaxSize().padding(innerPadding),
         ) {
-            item("metadata") {
-                SettingsRow(
+            item("settings") {
+                OverviewRow(
                     icon = Icons.Filled.Edit,
-                    title = "Properties",
+                    title = "Game Settings",
                     subtitle = "Change game settings",
-                    onClick = { nav.navigate(Route.GameProperties(gameId.toString())) },
+                    onClick = { nav.navigate(Route.GameSettings(gameId.toString())) },
                 )
             }
             item("manage-slots") {
-                SettingsRow(
+                OverviewRow(
                     icon = Icons.Filled.Save,
                     title = "Save Slots",
                     subtitle = "Manage this game save slots",
@@ -92,7 +92,7 @@ fun SettingsScreen(
             }
             if (pinShortcutsSupported) {
                 item("home-shortcut") {
-                    SettingsRow(
+                    OverviewRow(
                         icon = Icons.AutoMirrored.Default.AddToHomeScreen,
                         title = "Add Shortcut to Home Screen",
                         subtitle = "Pin a launcher icon for this game",
@@ -105,7 +105,7 @@ fun SettingsScreen(
                 }
             }
             item("delete") {
-                SettingsRow(
+                OverviewRow(
                     icon = Icons.Filled.Delete,
                     title = "Delete",
                     subtitle = "Removes the game and all its saves",
@@ -136,7 +136,7 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun SettingsRow(
+private fun OverviewRow(
     icon: ImageVector,
     title: String,
     subtitle: String? = null,

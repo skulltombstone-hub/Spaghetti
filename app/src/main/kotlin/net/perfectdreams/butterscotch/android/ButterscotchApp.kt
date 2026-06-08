@@ -11,7 +11,7 @@ import net.perfectdreams.butterscotch.android.layouts.LayoutLibrary
 import net.perfectdreams.butterscotch.android.library.GameLibrary
 import net.perfectdreams.butterscotch.android.settings.SettingsStore
 import net.perfectdreams.butterscotch.android.screens.AboutScreen
-import net.perfectdreams.butterscotch.android.screens.GameMetadataScreen
+import net.perfectdreams.butterscotch.android.screens.GameSettingsScreen
 import net.perfectdreams.butterscotch.android.screens.GeneralSettingsScreen
 import net.perfectdreams.butterscotch.android.screens.ImportScreen
 import net.perfectdreams.butterscotch.android.screens.LauncherScreen
@@ -60,17 +60,17 @@ fun ButterscotchApp(gameLibrary: GameLibrary, layoutLibrary: LayoutLibrary, sett
         composable<Route.LayoutManager> {
             LayoutManagerScreen(gameLibrary = gameLibrary, layoutLibrary = layoutLibrary, nav = nav)
         }
-        composable<Route.GameSettings> { backStackEntry ->
-            val args = backStackEntry.toRoute<Route.GameSettings>()
+        composable<Route.GameOverview> { backStackEntry ->
+            val args = backStackEntry.toRoute<Route.GameOverview>()
             SettingsScreen(
                 library = gameLibrary,
                 gameId = UUID.fromString(args.gameId),
                 nav = nav
             )
         }
-        composable<Route.GameProperties> { backStackEntry ->
-            val args = backStackEntry.toRoute<Route.GameProperties>()
-            GameMetadataScreen(
+        composable<Route.GameSettings> { backStackEntry ->
+            val args = backStackEntry.toRoute<Route.GameSettings>()
+            GameSettingsScreen(
                 gameLibrary = gameLibrary,
                 layoutLibrary = layoutLibrary,
                 gameId = UUID.fromString(args.gameId),

@@ -23,7 +23,7 @@ import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GameMetadataScreen(
+fun GameSettingsScreen(
     gameLibrary: GameLibrary,
     layoutLibrary: LayoutLibrary,
     gameId: UUID,
@@ -62,7 +62,7 @@ fun GameMetadataScreen(
 
     Scaffold(
         topBar = {
-            ButterscotchTopBar({ Text("Properties") }, nav, navigationIcon = { ButterscotchBackButton(nav) })
+            ButterscotchTopBar({ Text("Game Settings") }, nav, navigationIcon = { ButterscotchBackButton(nav) })
         },
     ) { innerPadding ->
         Box(Modifier.fillMaxSize().padding(innerPadding).padding(24.dp)) {
