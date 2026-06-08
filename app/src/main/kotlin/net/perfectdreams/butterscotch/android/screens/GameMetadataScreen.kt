@@ -62,7 +62,7 @@ fun GameMetadataScreen(
 
     Scaffold(
         topBar = {
-            ButterscotchTopBar({ Text("Metadata") }, nav, navigationIcon = { ButterscotchBackButton(nav) })
+            ButterscotchTopBar({ Text("Properties") }, nav, navigationIcon = { ButterscotchBackButton(nav) })
         },
     ) { innerPadding ->
         Box(Modifier.fillMaxSize().padding(innerPadding).padding(24.dp)) {

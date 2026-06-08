@@ -68,8 +68,8 @@ fun ButterscotchApp(gameLibrary: GameLibrary, layoutLibrary: LayoutLibrary, sett
                 nav = nav
             )
         }
-        composable<Route.GameMetadata> { backStackEntry ->
-            val args = backStackEntry.toRoute<Route.GameMetadata>()
+        composable<Route.GameProperties> { backStackEntry ->
+            val args = backStackEntry.toRoute<Route.GameProperties>()
             GameMetadataScreen(
                 gameLibrary = gameLibrary,
                 layoutLibrary = layoutLibrary,

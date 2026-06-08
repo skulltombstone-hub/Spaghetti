@@ -77,9 +77,9 @@ fun SettingsScreen(
             item("metadata") {
                 SettingsRow(
                     icon = Icons.Filled.Edit,
-                    title = "Metadata",
+                    title = "Properties",
                     subtitle = "Change game settings",
-                    onClick = { nav.navigate(Route.GameMetadata(gameId.toString())) },
+                    onClick = { nav.navigate(Route.GameProperties(gameId.toString())) },
                 )
             }
             item("manage-slots") {
