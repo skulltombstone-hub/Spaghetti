@@ -23,7 +23,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
 import net.perfectdreams.butterscotch.android.layouts.GmlMouseButton
-import net.perfectdreams.butterscotch.android.shaders.BlitShader
+import net.perfectdreams.butterscotch.android.shaders.CrtShader
 import net.perfectdreams.harmony.gl.shaders.ShaderManager
 import net.perfectdreams.harmony.gl.shaders.bind
 import java.util.concurrent.Executors
@@ -57,7 +57,7 @@ class ButterscotchDroidRunner(val assets: AssetManager, val dataWinPath: String,
     private var fboWidth: Int = 0
     private var fboHeight: Int = 0
     val shaderManager = ShaderManager()
-    lateinit var blitShader: BlitShader
+    lateinit var crtShader: CrtShader
 
     data class FreeCameraState(
         val active: Boolean = false,
@@ -141,7 +141,7 @@ class ButterscotchDroidRunner(val assets: AssetManager, val dataWinPath: String,
                         ButterscotchNative.BUTTERSCOTCH_DROID_CONTINUE,
                         ButterscotchNative.BUTTERSCOTCH_DROID_CONTINUE_NO_SWAP -> {
                             if (stepStatus == ButterscotchNative.BUTTERSCOTCH_DROID_CONTINUE) {
-                                // Blit the runner's framebuffer to the screen, where we can apply post-processing shaders & stuffz
+                                // Blit the runner's framebuffer to the screen through the CRT post-processing pass
                                 GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0)
                                 GLES20.glViewport(0, 0, egl.width, egl.height)
 
@@ -152,8 +152,9 @@ class ButterscotchDroidRunner(val assets: AssetManager, val dataWinPath: String,
                                 GLES20.glDisable(GLES20.GL_SCISSOR_TEST)
 
                                 GLES30.glBindVertexArray(0)
-                                blitShader.bind {
+                                crtShader.bind {
                                     uTexture.set(GLES20.GL_TEXTURE0, this@ButterscotchDroidRunner.blitTextureId)
+                                    uResolution.set(egl.width.toFloat(), egl.height.toFloat())
                                 }
                                 GLES30.glDrawArrays(GLES30.GL_TRIANGLES, 0, 3)
 
@@ -341,9 +342,10 @@ class ButterscotchDroidRunner(val assets: AssetManager, val dataWinPath: String,
         val status = GLES20.glCheckFramebufferStatus(GLES20.GL_FRAMEBUFFER)
         check(status == GLES20.GL_FRAMEBUFFER_COMPLETE) { "Framebuffer is not complete! Status is $status" }
 
-        val blitVertexShader = assets.open("shaders/blit.vsh").readBytes().toString(Charsets.UTF_8)
-        val blitFragmentShader = assets.open("shaders/blit.fsh").readBytes().toString(Charsets.UTF_8)
-        blitShader = shaderManager.loadShader(blitVertexShader, blitFragmentShader) { BlitShader(it) }
+        // blit.vsh is just a fullscreen triangle emitting vTexCoord, so the CRT pass reuses it as is
+        val crtVertexShader = assets.open("shaders/blit.vsh").readBytes().toString(Charsets.UTF_8)
+        val crtFragmentShader = assets.open("shaders/crt.fsh").readBytes().toString(Charsets.UTF_8)
+        crtShader = shaderManager.loadShader(crtVertexShader, crtFragmentShader) { CrtShader(it) }
     }
 
     // Reallocate the host framebuffer color texture when the surface size changes, otherwise the runner letterbox blits into a stale sized texture after a rotation
