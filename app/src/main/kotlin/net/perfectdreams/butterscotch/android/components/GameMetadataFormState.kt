@@ -25,6 +25,7 @@ class GameMetadataFormState(
     initialEnablePhysicalControllers: Boolean,
     initialEnablePhysicalKeyboard: Boolean,
     initialEnableWidescreenHack: Boolean,
+    initialPostProcessing: GameEntry.PostProcessingSettings,
 ) {
     var title by mutableStateOf(initialTitle)
     var selectedIcon by mutableStateOf(initialIcon)
@@ -34,6 +35,7 @@ class GameMetadataFormState(
     var enablePhysicalControllers by mutableStateOf(initialEnablePhysicalControllers)
     var enablePhysicalKeyboard by mutableStateOf(initialEnablePhysicalKeyboard)
     var enableWidescreenHack by mutableStateOf(initialEnableWidescreenHack)
+    var postProcessing by mutableStateOf(initialPostProcessing)
 
     val titleTrimmed: String get() = title.trim()
 }
@@ -49,7 +51,8 @@ fun rememberGameMetadataFormState(
     runnerOs: GameEntry.RunnerOs,
     enablePhysicalControllers: Boolean,
     enablePhysicalKeyboard: Boolean,
-    enableWidescreenHack: Boolean
+    enableWidescreenHack: Boolean,
+    postProcessing: GameEntry.PostProcessingSettings = GameEntry.PostProcessingSettings()
 ): GameMetadataFormState = remember(key) {
     GameMetadataFormState(
         initialTitle = title,
@@ -59,6 +62,7 @@ fun rememberGameMetadataFormState(
         initialRunnerOs = runnerOs,
         initialEnablePhysicalControllers = enablePhysicalControllers,
         initialEnablePhysicalKeyboard = enablePhysicalKeyboard,
-        initialEnableWidescreenHack = enableWidescreenHack
+        initialEnableWidescreenHack = enableWidescreenHack,
+        initialPostProcessing = postProcessing
     )
 }

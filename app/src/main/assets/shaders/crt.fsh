@@ -8,11 +8,18 @@ uniform sampler2D uTexture;
 uniform vec2 uResolution;
 out vec4 fragColor;
 
+uniform float uCurvature;
+uniform float uAberration;
+uniform float uHalation;
+uniform float uScanlines;
+uniform float uMask;
+uniform float uVignette;
+
 // Gentle barrel distortion so the image bows out like the curved glass of a CRT
 vec2 curveRemap(vec2 uv) {
     uv = uv * 2.0 - 1.0;
     vec2 offset = abs(uv.yx) / vec2(7.0, 5.0);
-    uv += uv * offset * offset;
+    uv += uv * offset * offset * uCurvature;
     return uv * 0.5 + 0.5;
 }
 
@@ -32,7 +39,7 @@ void main() {
 
     // Subtle horizontal chromatic aberration, stronger toward the edges where a CRT lens fringes the most
     float edge = distance(uv, vec2(0.5));
-    float aberration = edge / uResolution.x * 4.0;
+    float aberration = edge / uResolution.x * 4.0 * uAberration;
     vec3 color;
     color.r = texture(uTexture, uv + vec2(aberration, 0.0)).r;
     color.g = texture(uTexture, uv).g;
@@ -55,7 +62,7 @@ void main() {
     glow += sampleLinear(uv + glowRadius * vec2( 1.0, -1.0));
     glow += sampleLinear(uv + glowRadius * vec2(-1.0, -1.0));
     glow = max(glow * 0.125 - 0.5, 0.0) * vec3(1.0, 0.85, 0.7);
-    color += glow * 0.6;
+    color += glow * 0.6 * uHalation;
 
     // Linear luminance, used to bloom the scanlines: a real beam fattens in bright areas so the lines nearly vanish in highlights
     float lum = dot(color, vec3(0.2126, 0.7152, 0.0722));
@@ -66,19 +73,19 @@ void main() {
     float lines = uResolution.y / 5.0;
     float scanPhase = fract(uv.y * lines);
     float scan = pow(0.5 + 0.5 * sin(scanPhase * 6.2831853), 2.0);
-    float scanDepth = mix(0.35, 0.08, lum);
+    float scanDepth = mix(0.35, 0.08, lum) * uScanlines;
     color *= 1.0 - scanDepth * scan;
 
     // RGB phosphor triads: tint each 3 physical pixel column toward R, G or B for a hint of real aperture grille structure
     // Kept subtle on purpose, at native phone resolution a strong mask moires and colour fringes
     int triad = int(mod(gl_FragCoord.x, 3.0));
     vec3 maskTint = triad == 0 ? vec3(1.0, 0.6, 0.6) : (triad == 1 ? vec3(0.6, 1.0, 0.6) : vec3(0.6, 0.6, 1.0));
-    color *= mix(vec3(1.0), maskTint, 0.25);
+    color *= mix(vec3(1.0), maskTint, 0.25 * uMask);
 
     // Vignette so the brightness falls off toward the corners
     float vignette = uv.x * (1.0 - uv.x) * uv.y * (1.0 - uv.y);
     vignette = clamp(pow(vignette * 16.0, 0.20), 0.0, 1.0);
-    color *= vignette;
+    color *= mix(1.0, vignette, uVignette);
 
     // Feather the bezel edge so the curvature cutoff is anti-aliased into a soft border instead of a hard jagged line
     vec2 feather = 2.0 / uResolution;

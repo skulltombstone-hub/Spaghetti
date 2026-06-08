@@ -67,6 +67,7 @@ import net.perfectdreams.butterscotch.android.layouts.GamepadElement
 import net.perfectdreams.butterscotch.android.layouts.GamepadLayout
 import net.perfectdreams.butterscotch.android.layouts.GmlKey
 import net.perfectdreams.butterscotch.android.layouts.InputBinding
+import net.perfectdreams.butterscotch.android.library.GameEntry
 
 /**
  * Just the on-screen gameplay controls (joystick + action buttons), no menu. Renders into whatever
@@ -236,6 +237,8 @@ fun MenuOverlay(
     onSelectLandscapeLayout: (UUID) -> Unit,
     widescreenHackEnabled: Boolean,
     onToggleWidescreenHack: (Boolean) -> Unit,
+    postProcessing: GameEntry.PostProcessingSettings,
+    onChangePostProcessing: (GameEntry.PostProcessingSettings) -> Unit,
     modifier: Modifier = Modifier
 ) {
     // Back button: if the menu is open, close it. Otherwise open it. Same toggle the hamburger does.
@@ -261,7 +264,9 @@ fun MenuOverlay(
             onSelectPortraitLayout = onSelectPortraitLayout,
             onSelectLandscapeLayout = onSelectLandscapeLayout,
             widescreenHackEnabled = widescreenHackEnabled,
-            onToggleWidescreenHack = onToggleWidescreenHack
+            onToggleWidescreenHack = onToggleWidescreenHack,
+            postProcessing = postProcessing,
+            onChangePostProcessing = onChangePostProcessing
         )
     }
 }
@@ -292,7 +297,9 @@ private fun BoxScope.MenuSidebar(
     onSelectPortraitLayout: (UUID) -> Unit,
     onSelectLandscapeLayout: (UUID) -> Unit,
     widescreenHackEnabled: Boolean,
-    onToggleWidescreenHack: (Boolean) -> Unit
+    onToggleWidescreenHack: (Boolean) -> Unit,
+    postProcessing: GameEntry.PostProcessingSettings,
+    onChangePostProcessing: (GameEntry.PostProcessingSettings) -> Unit
 ) {
     var isRoomWarpMenuOpen by remember { mutableStateOf(false) }
     var isSettingsOpen by remember { mutableStateOf(false) }
@@ -307,7 +314,9 @@ private fun BoxScope.MenuSidebar(
             onSelectPortraitLayout = onSelectPortraitLayout,
             onSelectLandscapeLayout = onSelectLandscapeLayout,
             widescreenHackEnabled = widescreenHackEnabled,
-            onToggleWidescreenHack = onToggleWidescreenHack
+            onToggleWidescreenHack = onToggleWidescreenHack,
+            postProcessing = postProcessing,
+            onChangePostProcessing = onChangePostProcessing
         )
     }
 
@@ -506,7 +515,9 @@ private fun SettingsBottomSheet(
     onSelectPortraitLayout: (UUID) -> Unit,
     onSelectLandscapeLayout: (UUID) -> Unit,
     widescreenHackEnabled: Boolean,
-    onToggleWidescreenHack: (Boolean) -> Unit
+    onToggleWidescreenHack: (Boolean) -> Unit,
+    postProcessing: GameEntry.PostProcessingSettings,
+    onChangePostProcessing: (GameEntry.PostProcessingSettings) -> Unit
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(modifier = Modifier
@@ -549,6 +560,21 @@ private fun SettingsBottomSheet(
                 "May cause visual glitches",
                 widescreenHackEnabled,
                 onToggleWidescreenHack
+            )
+
+            Spacer(Modifier.height(16.dp))
+
+            Text(
+                text = "Video",
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp,
+                modifier = Modifier.padding(bottom = 8.dp),
+            )
+
+            PostProcessingSection(
+                settings = postProcessing,
+                onChange = onChangePostProcessing,
             )
         }
     }

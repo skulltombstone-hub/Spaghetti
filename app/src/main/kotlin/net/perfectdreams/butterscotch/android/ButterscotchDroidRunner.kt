@@ -23,13 +23,15 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
 import net.perfectdreams.butterscotch.android.layouts.GmlMouseButton
+import net.perfectdreams.butterscotch.android.library.GameEntry
+import net.perfectdreams.butterscotch.android.shaders.BlitShader
 import net.perfectdreams.butterscotch.android.shaders.CrtShader
 import net.perfectdreams.harmony.gl.shaders.ShaderManager
 import net.perfectdreams.harmony.gl.shaders.bind
 import java.util.concurrent.Executors
 
 // The Butterscotch Android API is actually "global bound", but we use a class to help managing things here (and will be useful if we refactor down the road)
-class ButterscotchDroidRunner(val assets: AssetManager, val dataWinPath: String, val savesPath: String, val osType: Int, val enablePhysicalControllers: Boolean, val enablePhysicalKeyboard: Boolean, var enableWidescreenHack: Boolean) {
+class ButterscotchDroidRunner(val assets: AssetManager, val dataWinPath: String, val savesPath: String, val osType: Int, val enablePhysicalControllers: Boolean, val enablePhysicalKeyboard: Boolean, var enableWidescreenHack: Boolean, var postProcessing: GameEntry.PostProcessingSettings) {
     companion object {
         private const val TAG = "ButterscotchRenderLoop"
 
@@ -58,6 +60,7 @@ class ButterscotchDroidRunner(val assets: AssetManager, val dataWinPath: String,
     private var fboHeight: Int = 0
     val shaderManager = ShaderManager()
     lateinit var crtShader: CrtShader
+    lateinit var blitShader: BlitShader
 
     data class FreeCameraState(
         val active: Boolean = false,
@@ -152,9 +155,21 @@ class ButterscotchDroidRunner(val assets: AssetManager, val dataWinPath: String,
                                 GLES20.glDisable(GLES20.GL_SCISSOR_TEST)
 
                                 GLES30.glBindVertexArray(0)
-                                crtShader.bind {
-                                    uTexture.set(GLES20.GL_TEXTURE0, this@ButterscotchDroidRunner.blitTextureId)
-                                    uResolution.set(egl.width.toFloat(), egl.height.toFloat())
+                                when (postProcessing.shader) {
+                                    GameEntry.PostProcessingShader.OFF -> blitShader.bind {
+                                        uTexture.set(GLES20.GL_TEXTURE0, this@ButterscotchDroidRunner.blitTextureId)
+                                    }
+                                    GameEntry.PostProcessingShader.CRT -> crtShader.bind {
+                                        uTexture.set(GLES20.GL_TEXTURE0, this@ButterscotchDroidRunner.blitTextureId)
+                                        uResolution.set(egl.width.toFloat(), egl.height.toFloat())
+                                        val crt = postProcessing.crt
+                                        uCurvature.set(crt.curvature.toFloat())
+                                        uAberration.set(crt.aberration.toFloat())
+                                        uHalation.set(crt.halation.toFloat())
+                                        uScanlines.set(crt.scanlines.toFloat())
+                                        uMask.set(crt.mask.toFloat())
+                                        uVignette.set(crt.vignette.toFloat())
+                                    }
                                 }
                                 GLES30.glDrawArrays(GLES30.GL_TRIANGLES, 0, 3)
 
@@ -346,6 +361,10 @@ class ButterscotchDroidRunner(val assets: AssetManager, val dataWinPath: String,
         val crtVertexShader = assets.open("shaders/blit.vsh").readBytes().toString(Charsets.UTF_8)
         val crtFragmentShader = assets.open("shaders/crt.fsh").readBytes().toString(Charsets.UTF_8)
         crtShader = shaderManager.loadShader(crtVertexShader, crtFragmentShader) { CrtShader(it) }
+
+        // The plain passthrough blit, used when post-processing is set to Off
+        val blitFragmentShader = assets.open("shaders/blit.fsh").readBytes().toString(Charsets.UTF_8)
+        blitShader = shaderManager.loadShader(crtVertexShader, blitFragmentShader) { BlitShader(it) }
     }
 
     // Reallocate the host framebuffer color texture when the surface size changes, otherwise the runner letterbox blits into a stale sized texture after a rotation

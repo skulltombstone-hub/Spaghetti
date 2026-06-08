@@ -176,7 +176,7 @@ fun ImportScreen(
                 is ImportUIState.Configure -> ConfigurePane(
                     result = s.result,
                     layoutLibrary = layoutLibrary,
-                    onSave = { title, icon, portraitLayout, landscapeLayout, runnerOs, enablePhysicalControllers, enablePhysicalKeyboard, enableWidescreenHack ->
+                    onSave = { title, icon, portraitLayout, landscapeLayout, runnerOs, enablePhysicalControllers, enablePhysicalKeyboard, enableWidescreenHack, postProcessing ->
                         library.commit(
                             s.result.staged,
                             title,
@@ -190,7 +190,8 @@ fun ImportScreen(
                             runnerOs = runnerOs,
                             enablePhysicalControllers = enablePhysicalControllers,
                             enablePhysicalKeyboard = enablePhysicalKeyboard,
-                            enableWidescreenHack = enableWidescreenHack
+                            enableWidescreenHack = enableWidescreenHack,
+                            postProcessing = postProcessing
                         )
                         nav.popBackStack()
                     }
@@ -297,7 +298,7 @@ private fun CopyingPane(currentFile: String?) {
 private fun ConfigurePane(
     result: GameImporter.Result.Success,
     layoutLibrary: LayoutLibrary,
-    onSave: (title: String, icon: Bitmap?, portraitLayout: UUID, landscapeLayout: UUID, runnerOs: GameEntry.RunnerOs, enablePhysicalControllers: Boolean, enablePhysicalKeyboard: Boolean, enableWidescreenHack: Boolean) -> Unit
+    onSave: (title: String, icon: Bitmap?, portraitLayout: UUID, landscapeLayout: UUID, runnerOs: GameEntry.RunnerOs, enablePhysicalControllers: Boolean, enablePhysicalKeyboard: Boolean, enableWidescreenHack: Boolean, postProcessing: GameEntry.PostProcessingSettings) -> Unit
 ) {
     // suggestedTitle comes from GEN8 (may be null for pre-WAD10 games); fall back to the folder
     // name so the user never sees an empty field.
@@ -321,7 +322,7 @@ private fun ConfigurePane(
         state = state,
         loadCandidates = { result.iconCandidates },
         saveEnabled = state.title.isNotBlank(),
-        onSave = { onSave(state.title.ifBlank { initial }, state.selectedIcon, state.portraitLayout, state.landscapeLayout, state.runnerOs, state.enablePhysicalControllers, state.enablePhysicalKeyboard, state.enableWidescreenHack) },
+        onSave = { onSave(state.title.ifBlank { initial }, state.selectedIcon, state.portraitLayout, state.landscapeLayout, state.runnerOs, state.enablePhysicalControllers, state.enablePhysicalKeyboard, state.enableWidescreenHack, state.postProcessing) },
     )
 }
 

@@ -48,7 +48,8 @@ fun GameSettingsScreen(
         runnerOs = entry.runnerOs,
         enablePhysicalControllers = entry.enablePhysicalControllers,
         enablePhysicalKeyboard = entry.enablePhysicalKeyboard,
-        enableWidescreenHack = entry.enableWidescreenHack
+        enableWidescreenHack = entry.enableWidescreenHack,
+        postProcessing = entry.postProcessing
     )
 
     // The baseline is the persisted entry, so we only write back what the user actually touched instead of rewriting (and cache-invalidating) every field on Save.
@@ -59,6 +60,7 @@ fun GameSettingsScreen(
     val controllersChanged = state.enablePhysicalControllers != entry.enablePhysicalControllers
     val keyboardChanged = state.enablePhysicalKeyboard != entry.enablePhysicalKeyboard
     val widescreenHackChanged = state.enableWidescreenHack != entry.enableWidescreenHack
+    val postProcessingChanged = state.postProcessing != entry.postProcessing
 
     Scaffold(
         topBar = {
@@ -70,7 +72,7 @@ fun GameSettingsScreen(
                 layoutLibrary = layoutLibrary,
                 state = state,
                 loadCandidates = { scanIconCandidates(gameLibrary.bundleDir(entry)) },
-                saveEnabled = titleChanged || iconChanged || layoutsChanged || runnerOsChanged || controllersChanged || keyboardChanged || widescreenHackChanged,
+                saveEnabled = titleChanged || iconChanged || layoutsChanged || runnerOsChanged || controllersChanged || keyboardChanged || widescreenHackChanged || postProcessingChanged,
                 onSave = {
                     if (titleChanged) gameLibrary.setTitle(entry.id, state.titleTrimmed)
                     if (iconChanged) gameLibrary.setIcon(entry.id, state.selectedIcon)
@@ -79,6 +81,7 @@ fun GameSettingsScreen(
                     if (controllersChanged) gameLibrary.update(entry.id) { it.copy(enablePhysicalControllers = state.enablePhysicalControllers) }
                     if (keyboardChanged) gameLibrary.update(entry.id) { it.copy(enablePhysicalKeyboard = state.enablePhysicalKeyboard) }
                     if (widescreenHackChanged) gameLibrary.update(entry.id) { it.copy(enableWidescreenHack = state.enableWidescreenHack) }
+                    if (postProcessingChanged) gameLibrary.update(entry.id) { it.copy(postProcessing = state.postProcessing) }
                     nav.popBackStack()
                 },
             )

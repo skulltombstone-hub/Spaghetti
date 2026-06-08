@@ -132,7 +132,8 @@ class GameActivity : ComponentActivity() {
             entry.runnerOs.nativeValue,
             entry.enablePhysicalControllers,
             entry.enablePhysicalKeyboard,
-            entry.enableWidescreenHack
+            entry.enableWidescreenHack,
+            entry.postProcessing
         )
         this.butterscotchRunner = butterscotchRunner
 
@@ -160,6 +161,8 @@ class GameActivity : ComponentActivity() {
                 val mouseButtonOverride = remember { mutableStateOf(GmlMouseButton.LEFT_BUTTON) }
                 // Hoisted so the in-game Settings switch reflects (and persists) the live runner flag.
                 var widescreenHackEnabled by remember { mutableStateOf(entry.enableWidescreenHack) }
+                // Same pattern for the post-processing shader: drives the live runner field and persists
+                var postProcessing by remember { mutableStateOf(entry.postProcessing) }
                 var editorState by remember { mutableStateOf<GamepadEditorState?>(null) }
 
                 val isPaused = editorState != null || menuOpen
@@ -477,6 +480,12 @@ class GameActivity : ComponentActivity() {
                                 widescreenHackEnabled = enabled
                                 butterscotchRunner.enableWidescreenHack = enabled
                                 gameLibrary.update(entry.id) { it.copy(enableWidescreenHack = enabled) }
+                            },
+                            postProcessing = postProcessing,
+                            onChangePostProcessing = { newSettings ->
+                                postProcessing = newSettings
+                                butterscotchRunner.postProcessing = newSettings
+                                gameLibrary.update(entry.id) { it.copy(postProcessing = newSettings) }
                             },
                         )
 

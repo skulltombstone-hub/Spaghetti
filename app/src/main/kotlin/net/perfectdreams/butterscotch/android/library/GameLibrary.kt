@@ -97,7 +97,8 @@ class GameLibrary private constructor(
         runnerOs: GameEntry.RunnerOs = GameEntry.RunnerOs.WINDOWS,
         enablePhysicalControllers: Boolean = true,
         enablePhysicalKeyboard: Boolean = true,
-        enableWidescreenHack: Boolean = false
+        enableWidescreenHack: Boolean = false,
+        postProcessing: GameEntry.PostProcessingSettings = GameEntry.PostProcessingSettings()
     ) {
         val initialSlotId = UUID.randomUUID()
         File(gameDir(staged.id), "saves/$initialSlotId").mkdirs()
@@ -119,6 +120,8 @@ class GameLibrary private constructor(
             runnerOs = runnerOs,
             enablePhysicalControllers = enablePhysicalControllers,
             enablePhysicalKeyboard = enablePhysicalKeyboard,
+            enableWidescreenHack = enableWidescreenHack,
+            postProcessing = postProcessing,
         )
         entries.add(entry)
         // Sync order after adding a new entry

@@ -15,8 +15,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Slider
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
@@ -43,6 +51,7 @@ import net.perfectdreams.butterscotch.android.layouts.LayoutLibrary
 import net.perfectdreams.butterscotch.android.library.GameEntry
 import net.perfectdreams.butterscotch.android.pe.IconCandidate
 import java.util.UUID
+import kotlin.math.roundToInt
 
 /**
  * A shared game metadata editor.
@@ -138,6 +147,13 @@ fun MetadataForm(
             subtitle = "May cause visual glitches",
             checked = state.enableWidescreenHack,
             onChange = { state.enableWidescreenHack = it },
+        )
+
+        Spacer(Modifier.height(24.dp))
+
+        PostProcessingSection(
+            settings = state.postProcessing,
+            onChange = { state.postProcessing = it },
         )
 
         Spacer(Modifier.height(24.dp))
@@ -288,5 +304,98 @@ fun InputToggle(
         }
 
         Switch(checked = checked, onCheckedChange = null)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PostProcessingSection(
+    settings: GameEntry.PostProcessingSettings,
+    onChange: (GameEntry.PostProcessingSettings) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    var crtDialogOpen by remember { mutableStateOf(false) }
+
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = it },
+            modifier = Modifier.weight(1f),
+        ) {
+            OutlinedTextField(
+                value = settings.shader.fancyName,
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Post-Processing Shaders") },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable).fillMaxWidth(),
+            )
+            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                GameEntry.PostProcessingShader.entries.forEach { shader ->
+                    DropdownMenuItem(
+                        text = { Text(shader.fancyName) },
+                        onClick = {
+                            onChange(settings.copy(shader = shader))
+                            expanded = false
+                        },
+                    )
+                }
+            }
+        }
+
+        // Always shown so the row layout stays stable, but only the CRT shader has anything to tweak
+        IconButton(onClick = { crtDialogOpen = true }, enabled = settings.shader == GameEntry.PostProcessingShader.CRT) {
+            Icon(Icons.Default.Settings, contentDescription = "Customize CRT shader")
+        }
+    }
+
+    if (crtDialogOpen) {
+        CrtSettingsDialog(
+            settings = settings.crt,
+            onChange = { onChange(settings.copy(crt = it)) },
+            onDismiss = { crtDialogOpen = false },
+        )
+    }
+}
+
+// Sliders for each CRT effect strength (0..100%). Edits write straight back through onChange so the preview state
+// stays live; the values only persist when the surrounding form is saved.
+@Composable
+private fun CrtSettingsDialog(
+    settings: GameEntry.CrtSettings,
+    onChange: (GameEntry.CrtSettings) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Done") } },
+        title = { Text("CRT Shader") },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                CrtSlider("Curvature", settings.curvature) { onChange(settings.copy(curvature = it)) }
+                CrtSlider("Chromatic aberration", settings.aberration) { onChange(settings.copy(aberration = it)) }
+                CrtSlider("Halation glow", settings.halation) { onChange(settings.copy(halation = it)) }
+                CrtSlider("Scanlines", settings.scanlines) { onChange(settings.copy(scanlines = it)) }
+                CrtSlider("Phosphor mask", settings.mask) { onChange(settings.copy(mask = it)) }
+                CrtSlider("Vignette", settings.vignette) { onChange(settings.copy(vignette = it)) }
+            }
+        },
+    )
+}
+
+// The strength is stored as a 0.0..1.0 fraction (matching the shader uniform), but the slider works in whole
+// percent for feel, so we scale by 100 at this UI boundary only
+@Composable
+private fun CrtSlider(label: String, value: Double, onChange: (Double) -> Unit) {
+    Column {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(label)
+            Text("${(value * 100).roundToInt()}%", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Slider(
+            value = (value * 100).toFloat(),
+            onValueChange = { onChange(it.roundToInt() / 100.0) },
+            valueRange = 0f..100f,
+        )
     }
 }

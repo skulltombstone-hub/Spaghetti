@@ -29,6 +29,7 @@ data class GameEntry(
     /** When true, a physical (USB/Bluetooth) keyboard feeds the GML keyboard_* builtins. Default on; turn off for games that misbehave with a keyboard attached. */
     val enablePhysicalKeyboard: Boolean = true,
     val enableWidescreenHack: Boolean = false,
+    val postProcessing: PostProcessingSettings = PostProcessingSettings(),
 ) {
     // Mirrors the YoYoOperatingSystem enum in Butterscotch's runner.h. nativeValue MUST match the
     // C enum's integer value, since it is passed straight through startRunner to runner->osType.
@@ -77,5 +78,29 @@ data class GameEntry(
         val id: UUID,
         val active: Boolean,
         val fancyName: String,
+    )
+
+    // Which fullscreen post-processing pass the host blits the game through. OFF is the plain passthrough blit
+    @Serializable
+    enum class PostProcessingShader(val fancyName: String) {
+        OFF("Off"),
+        CRT("CRT Shader"),
+    }
+
+    // Per-effect strengths for the CRT shader, each a 0.0..1.0 fraction fed straight to the matching shader uniform. 1.0 keeps the shader's baseline look, 0.0 disables that effect
+    @Serializable
+    data class CrtSettings(
+        val curvature: Double = 1.0,
+        val aberration: Double = 1.0,
+        val halation: Double = 1.0,
+        val scanlines: Double = 1.0,
+        val mask: Double = 1.0,
+        val vignette: Double = 1.0,
+    )
+
+    @Serializable
+    data class PostProcessingSettings(
+        val shader: PostProcessingShader = PostProcessingShader.OFF,
+        val crt: CrtSettings = CrtSettings(),
     )
 }
