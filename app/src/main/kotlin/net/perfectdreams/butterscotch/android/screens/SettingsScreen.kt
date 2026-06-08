@@ -78,7 +78,7 @@ fun SettingsScreen(
                 SettingsRow(
                     icon = Icons.Filled.Edit,
                     title = "Metadata",
-                    subtitle = "Title, icon",
+                    subtitle = "Change game settings",
                     onClick = { nav.navigate(Route.GameMetadata(gameId.toString())) },
                 )
             }
@@ -86,7 +86,7 @@ fun SettingsScreen(
                 SettingsRow(
                     icon = Icons.Filled.Save,
                     title = "Save Slots",
-                    subtitle = "${entry.saveSlots.size} slot${if (entry.saveSlots.size == 1) "" else "s"} · active: ${entry.saveSlots.first { it.active }.fancyName}",
+                    subtitle = "Manage this game save slots",
                     onClick = { nav.navigate(Route.SaveSlotList(gameId.toString())) },
                 )
             }
