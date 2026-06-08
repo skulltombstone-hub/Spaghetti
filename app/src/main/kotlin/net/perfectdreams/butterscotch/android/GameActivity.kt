@@ -365,15 +365,12 @@ class GameActivity : ComponentActivity() {
                         when (layoutMode) {
                             LayoutMode.Overlay -> {
                                 Box(Modifier.fillMaxSize()) {
-                                    val gameSurfaceModifier = if (freeCam.active) {
-                                        // Fill the whole screen!
-                                        Modifier.fillMaxSize()
-                                    } else if (targetOperatingSystemDisplaySize != null) {
+                                    val gameSurfaceModifier = if (freeCam.active || widescreenHackEnabled) {
+                                        Modifier.fillMaxSize() // Fill the whole screen!
+                                    } else {
                                         (if (deviceAspect > contentAspect) Modifier.fillMaxHeight() else Modifier.fillMaxWidth())
                                             .aspectRatio(contentAspect)
                                             .align(Alignment.Center)
-                                    } else {
-                                        Modifier.fillMaxSize()
                                     }
                                     gameSurface(gameSurfaceModifier)
                                     if (!freeCam.active) {
@@ -405,10 +402,9 @@ class GameActivity : ComponentActivity() {
                                             .weight(1f),
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        // Fill the whole screen!
                                         gameSurface(
                                             if (freeCam.active || widescreenHackEnabled)
-                                                Modifier.fillMaxSize()
+                                                Modifier.fillMaxSize() // Fill the whole screen!
                                             else
                                                 Modifier
                                                     .fillMaxWidth()
