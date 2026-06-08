@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -61,7 +62,7 @@ fun GameMetadataScreen(
 
     Scaffold(
         topBar = {
-            ButterscotchTopBar("Metadata", nav, navigationIcon = { ButterscotchBackButton(nav) })
+            ButterscotchTopBar({ Text("Metadata") }, nav, navigationIcon = { ButterscotchBackButton(nav) })
         },
     ) { innerPadding ->
         Box(Modifier.fillMaxSize().padding(innerPadding).padding(24.dp)) {

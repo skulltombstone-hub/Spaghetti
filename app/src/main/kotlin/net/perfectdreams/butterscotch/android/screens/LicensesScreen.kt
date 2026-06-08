@@ -59,7 +59,7 @@ fun LicensesScreen(nav: NavHostController) {
     var selected by remember { mutableStateOf<LicenseEntry?>(null) }
 
     Scaffold(
-        topBar = { ButterscotchTopBar("Licenses", nav, navigationIcon = { ButterscotchBackButton(nav) }) },
+        topBar = { ButterscotchTopBar({ Text("Licenses") }, nav, navigationIcon = { ButterscotchBackButton(nav) }) },
     ) { innerPadding ->
         Column(
             modifier = Modifier

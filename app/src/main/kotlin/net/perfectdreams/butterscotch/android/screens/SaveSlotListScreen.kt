@@ -63,7 +63,7 @@ fun SaveSlotListScreen(
     Scaffold(
         topBar = {
             ButterscotchTopBar(
-                title = "Save Slots",
+                title = { Text("Save Slots") },
                 nav = nav,
                 navigationIcon = { ButterscotchBackButton(nav) },
             )

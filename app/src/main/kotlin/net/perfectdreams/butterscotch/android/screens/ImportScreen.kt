@@ -139,9 +139,13 @@ fun ImportScreen(
     Scaffold(
         topBar = {
             ButterscotchTopBar(
-                when (state) {
-                    is ImportUIState.Configure -> "Configure Game"
-                    else -> "Add Game"
+                {
+                    Text(
+                        when (state) {
+                            is ImportUIState.Configure -> "Configure Game"
+                            else -> "Add Game"
+                        }
+                    )
                 },
                 nav,
                 navigationIcon = {

@@ -110,7 +110,7 @@ fun LayoutManagerScreen(
 
     Scaffold(
         topBar = {
-            ButterscotchTopBar("Gamepad Layouts", nav, navigationIcon = { ButterscotchBackButton(nav) })
+            ButterscotchTopBar({ Text("Gamepad Layouts") }, nav, navigationIcon = { ButterscotchBackButton(nav) })
         },
         floatingActionButton = {
             FloatingActionButton(onClick = { importLauncher.launch(arrayOf("application/json")) }) {

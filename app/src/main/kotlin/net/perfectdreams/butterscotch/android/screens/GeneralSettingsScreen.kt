@@ -9,9 +9,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.VideogameAsset
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -51,30 +53,42 @@ fun GeneralSettingsScreen(
 
     Scaffold(
         topBar = {
-            ButterscotchTopBar("Settings", nav, navigationIcon = { ButterscotchBackButton(nav) })
+            ButterscotchTopBar({ Text("Settings") }, nav, navigationIcon = { ButterscotchBackButton(nav) })
         },
     ) { innerPadding ->
-        Box(Modifier.fillMaxSize().padding(innerPadding).padding(24.dp)) {
-            Column {
-                InputToggle("Enable Haptic Feedback", null, settings.enableHapticFeedback) { enabled ->
-                    settingsStore.update { copy(enableHapticFeedback = enabled) }
-                }
+        LazyColumn(
+            Modifier.fillMaxSize().padding(innerPadding),
+        ) {
+            item {
+                Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
+                    InputToggle(
+                        "Enable Haptic Feedback",
+                        null,
+                        settings.enableHapticFeedback
+                    ) { enabled ->
+                        settingsStore.update { copy(enableHapticFeedback = enabled) }
+                    }
 
-                if (settings.enableHapticFeedback) {
-                    Text("Haptic Strength: ${settings.hapticStrength}%")
-                    Slider(
-                        value = settings.hapticStrength.toFloat(),
-                        onValueChange = { settingsStore.update { copy(hapticStrength = it.roundToInt()) } },
-                        // Buzz once at the chosen level when the user lets go, so they can feel it
-                        onValueChangeFinished = { previewHaptics.tick(settings.hapticStrength) },
-                        valueRange = 10f..100f,
-                        // 10..100 in steps of 10 = 10 stops, which is 8 ticks between the endpoints
-                        steps = 8,
-                    )
-                }
+                    if (settings.enableHapticFeedback) {
+                        Text("Haptic Strength: ${settings.hapticStrength}%")
+                        Slider(
+                            value = settings.hapticStrength.toFloat(),
+                            onValueChange = { settingsStore.update { copy(hapticStrength = it.roundToInt()) } },
+                            // Buzz once at the chosen level when the user lets go, so they can feel it
+                            onValueChangeFinished = { previewHaptics.tick(settings.hapticStrength) },
+                            valueRange = 10f..100f,
+                            // 10..100 in steps of 10 = 10 stops, which is 8 ticks between the endpoints
+                            steps = 8,
+                        )
+                    }
 
+                    HorizontalDivider()
+                }
+            }
+
+            item {
                 Row(
-                    Modifier.fillMaxWidth().clickable { nav.navigate(Route.LayoutManager) }.padding(vertical = 16.dp),
+                    Modifier.fillMaxWidth().clickable { nav.navigate(Route.LayoutManager) }.padding(horizontal = 24.dp, vertical = 16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(Icons.Filled.VideogameAsset, contentDescription = null, tint = MaterialTheme.colorScheme.primary)

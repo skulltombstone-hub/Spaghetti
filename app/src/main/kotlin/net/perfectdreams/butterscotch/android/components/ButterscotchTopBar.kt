@@ -16,13 +16,13 @@ import androidx.navigation.NavHostController
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ButterscotchTopBar(
-    title: String,
+    title: @Composable (() -> Unit),
     nav: NavHostController,
     navigationIcon: @Composable (() -> Unit) = {},
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     TopAppBar(
-        title = { Text(title) },
+        title = { title() },
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.primary,
             titleContentColor = MaterialTheme.colorScheme.onPrimary,

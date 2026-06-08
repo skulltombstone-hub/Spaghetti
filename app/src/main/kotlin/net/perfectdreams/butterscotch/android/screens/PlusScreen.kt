@@ -55,7 +55,7 @@ fun PlusScreen(nav: NavHostController) {
     val billing = remember { BillingManager.getInstance(context) }
 
     Scaffold(
-        topBar = { ButterscotchTopBar("Butterscotch Plus", nav, navigationIcon = { ButterscotchBackButton(nav) }) },
+        topBar = { ButterscotchTopBar({ Text("Butterscotch Plus") }, nav, navigationIcon = { ButterscotchBackButton(nav) }) },
     ) { innerPadding ->
         Column(
             modifier = Modifier

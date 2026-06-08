@@ -49,7 +49,7 @@ fun AboutScreen(nav: NavHostController) {
     }
 
     Scaffold(
-        topBar = { ButterscotchTopBar("About", nav, navigationIcon = { ButterscotchBackButton(nav) }) },
+        topBar = { ButterscotchTopBar({ Text("About") }, nav, navigationIcon = { ButterscotchBackButton(nav) }) },
     ) { innerPadding ->
         Column(
             modifier = Modifier

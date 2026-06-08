@@ -136,7 +136,7 @@ fun SaveSlotDetailScreen(
     Scaffold(
         topBar = {
             ButterscotchTopBar(
-                title = slot.fancyName,
+                title = { Text(slot.fancyName) },
                 nav = nav,
                 navigationIcon = { ButterscotchBackButton(nav) },
             )

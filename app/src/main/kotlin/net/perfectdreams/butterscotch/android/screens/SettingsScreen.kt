@@ -68,7 +68,7 @@ fun SettingsScreen(
 
     Scaffold(
         topBar = {
-            ButterscotchTopBar(entry.title, nav, navigationIcon = { ButterscotchBackButton(nav) })
+            ButterscotchTopBar({ Text(entry.title) }, nav, navigationIcon = { ButterscotchBackButton(nav) })
         }
     ) { innerPadding ->
         LazyColumn(
