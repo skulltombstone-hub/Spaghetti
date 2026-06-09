@@ -12,6 +12,7 @@ import android.view.SurfaceHolder
 import android.view.SurfaceView
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
+import net.perfectdreams.butterscotch.android.billing.BillingManager
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -55,7 +56,10 @@ import net.perfectdreams.butterscotch.android.layouts.LayoutLibrary
 import net.perfectdreams.butterscotch.android.library.GameLibrary
 import net.perfectdreams.butterscotch.android.settings.SettingsStore
 import net.perfectdreams.butterscotch.android.theme.ButterscotchAndroidTheme
+import java.io.File
+import java.security.MessageDigest
 import java.util.UUID
+import java.util.zip.CRC32
 
 /**
  * Hosts a [SurfaceView] that the native side draws into, with a Compose-based virtual gamepad
@@ -126,12 +130,14 @@ class GameActivity : ComponentActivity() {
         val butterscotchRunner = ButterscotchDroidRunner(
             this.assets,
             wadFile.absolutePath,
+            crc32(wadFile),
             savesDir.absolutePath,
             entry.runnerOs.nativeValue,
             entry.enablePhysicalControllers,
             entry.enablePhysicalKeyboard,
             entry.enableWidescreenHack,
-            entry.postProcessing
+            entry.postProcessing,
+            BillingManager.getInstance(this.applicationContext).isPlus
         )
         this.butterscotchRunner = butterscotchRunner
 
@@ -556,6 +562,19 @@ class GameActivity : ComponentActivity() {
     override fun onDestroy() {
         butterscotchRunner?.requestExit()
         super.onDestroy()
+    }
+
+    fun crc32(file: File): Long {
+        val crc = CRC32()
+        file.inputStream().use { input ->
+            val buffer = ByteArray(64 * 1024)
+            var read = input.read(buffer)
+            while (read != -1) {
+                crc.update(buffer, 0, read)
+                read = input.read(buffer)
+            }
+        }
+        return crc.value
     }
 
     companion object {

@@ -53,6 +53,9 @@ object ButterscotchNative {
     external fun dataWinDisplayName(handle: Long): String?
     /** Returns -1 if the handle is 0. */
     external fun dataWinWadVersion(handle: Long): Int
+    external fun dataWinGmsVersion(handle: Long): String
+    external fun dataWinDetectedGmsVersion(handle: Long): String
+    external fun getRunningDataWinHandle(): Long
 
     // ===[ Render-side JNI — all must run on the EGL-owning thread ]===
 

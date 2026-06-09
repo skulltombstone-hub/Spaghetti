@@ -31,7 +31,18 @@ import net.perfectdreams.harmony.gl.shaders.bind
 import java.util.concurrent.Executors
 
 // The Butterscotch Android API is actually "global bound", but we use a class to help managing things here (and will be useful if we refactor down the road)
-class ButterscotchDroidRunner(val assets: AssetManager, val dataWinPath: String, val savesPath: String, val osType: Int, val enablePhysicalControllers: Boolean, val enablePhysicalKeyboard: Boolean, var enableWidescreenHack: Boolean, var postProcessing: GameEntry.PostProcessingSettings) {
+class ButterscotchDroidRunner(
+    val assets: AssetManager,
+    val dataWinPath: String,
+    val wadHash: Long,
+    val savesPath: String,
+    val osType: Int,
+    val enablePhysicalControllers: Boolean,
+    val enablePhysicalKeyboard: Boolean,
+    var enableWidescreenHack: Boolean,
+    var postProcessing: GameEntry.PostProcessingSettings,
+    val isPlus: Boolean
+) {
     companion object {
         private const val TAG = "ButterscotchRenderLoop"
 
@@ -105,6 +116,20 @@ class ButterscotchDroidRunner(val assets: AssetManager, val dataWinPath: String,
                     prepare()
 
                     ButterscotchNative.startRunner(dataWinPath, savesPath, osType, this@ButterscotchDroidRunner.fboId)
+                    val dataWinHandle = ButterscotchNative.getRunningDataWinHandle()
+                    val dataWinName = ButterscotchNative.dataWinName(dataWinHandle)
+                    val dataWinDisplayName = ButterscotchNative.dataWinDisplayName(dataWinHandle)
+                    val dataWinWadVersion = ButterscotchNative.dataWinWadVersion(dataWinHandle)
+                    val gmsVersion = ButterscotchNative.dataWinGmsVersion(dataWinHandle)
+                    val detectedGmsVersion = ButterscotchNative.dataWinDetectedGmsVersion(dataWinHandle)
+
+                    // glGetString requires a current GL context, which we have here because bindWindow succeeded on this thread
+                    val gpuVendor = GLES20.glGetString(GLES20.GL_VENDOR) ?: "Unknown"
+                    val gpuRenderer = GLES20.glGetString(GLES20.GL_RENDERER) ?: "Unknown"
+                    val gpuVersion = GLES20.glGetString(GLES20.GL_VERSION) ?: "Unknown"
+
+                    ButterscotchUtils.fireGameLaunchEvent(wadHash, dataWinName, dataWinDisplayName, dataWinWadVersion, gmsVersion, detectedGmsVersion, gpuVendor, gpuRenderer, gpuVersion, isPlus)
+
                     runnerStarted = true
                 }
 

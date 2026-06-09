@@ -88,7 +88,7 @@ android {
         }
 
         debug {
-            buildConfigField("boolean", "FORCE_BUTTERSCOTCH_PLUS", "false")
+            buildConfigField("boolean", "FORCE_BUTTERSCOTCH_PLUS", "true")
             buildConfigField("String", "API_BASE_URL", "\"http://192.168.15.125:8080\"")
             buildConfigField("String", "API_VERSION", "\"v1\"")
         }

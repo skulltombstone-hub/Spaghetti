@@ -1,11 +1,9 @@
 package net.perfectdreams.butterscotch.android
 
 import android.content.Context
-import net.perfectdreams.butterscotch.android.billing.BillingManager
 import net.perfectdreams.butterscotch.android.layouts.LayoutLibrary
 import net.perfectdreams.butterscotch.android.library.GameLibrary
 import net.perfectdreams.butterscotch.android.settings.SettingsStore
-import net.perfectdreams.butterscotch.android.state.AppStateStore
 
 object Libraries {
     // We NEED to cache this because we WANT a singleton instance
@@ -14,7 +12,6 @@ object Libraries {
     var gameLibrary: GameLibrary? = null
     var layoutLibrary: LayoutLibrary? = null
     var settingsStore: SettingsStore? = null
-    var appStateStore: AppStateStore? = null
 
     fun loadGameLibrary(context: Context): GameLibrary {
         return this.gameLibrary ?: GameLibrary.load(context).also { this@Libraries.gameLibrary = it }
@@ -26,9 +23,5 @@ object Libraries {
 
     fun loadSettingsStore(context: Context): SettingsStore {
         return this.settingsStore ?: SettingsStore.load(context).also { this@Libraries.settingsStore = it }
-    }
-
-    fun loadAppStateStore(context: Context): AppStateStore {
-        return this.appStateStore ?: AppStateStore.load(context).also { this@Libraries.appStateStore = it }
     }
 }

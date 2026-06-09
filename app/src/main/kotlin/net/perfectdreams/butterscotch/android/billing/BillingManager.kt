@@ -25,7 +25,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import net.perfectdreams.butterscotch.android.BuildConfig
-import net.perfectdreams.butterscotch.android.Libraries
 
 /**
  * Owns the [BillingClient] connection and the in-app purchase lifecycle.
@@ -42,7 +41,7 @@ class BillingManager private constructor(
     }
 
     // Whether the user owns the Pro unlock, seeded from the local cache so the UI is correct before the (async) Play Store query comes back
-    var isPlus by mutableStateOf(if (BuildConfig.DEBUG) BuildConfig.FORCE_BUTTERSCOTCH_PLUS else Libraries.loadAppStateStore(appContext).state.isButterscotchSuperDuperPlus)
+    var isPlus by mutableStateOf(if (BuildConfig.DEBUG) BuildConfig.FORCE_BUTTERSCOTCH_PLUS else prefs().getBoolean(KEY_PLUS, false))
         private set
 
     // ProductDetails for the Pro unlock once queried, used to show the localized price
@@ -197,12 +196,16 @@ class BillingManager private constructor(
             this.isPlus = true
         } else {
             this.isPlus = value
-            Libraries.loadAppStateStore(appContext).update { copy(isButterscotchSuperDuperPlus = value) }
+            prefs().edit().putBoolean(KEY_PLUS, value).apply()
         }
     }
 
+    private fun prefs() = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
     companion object {
         private const val TAG = "BillingManager"
+        private const val PREFS_NAME = "butterscotch_billing"
+        private const val KEY_PLUS = "plus_unlocked"
         const val PLUS_PRODUCT_ID = "butterscotch_pro"
 
         private var instance: BillingManager? = null
