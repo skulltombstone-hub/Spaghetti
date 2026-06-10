@@ -46,6 +46,7 @@ import androidx.navigation.NavHostController
 import net.perfectdreams.butterscotch.android.R
 import net.perfectdreams.butterscotch.android.billing.BillingManager
 import net.perfectdreams.butterscotch.android.components.ButterscotchBackButton
+import net.perfectdreams.butterscotch.android.components.ButterscotchBobImage
 import net.perfectdreams.butterscotch.android.components.ButterscotchTopBar
 
 @Composable
@@ -65,26 +66,7 @@ fun PlusScreen(nav: NavHostController) {
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            val transition = rememberInfiniteTransition(label = "logoBob")
-            val offsetY by transition.animateFloat(
-                initialValue = 0f,
-                targetValue = -12f,
-                animationSpec = infiniteRepeatable(
-                    animation = tween(1_800, easing = EaseInOut),
-                    repeatMode = RepeatMode.Reverse,
-                ),
-                label = "offsetY",
-            )
-
-            Image(
-                bitmap = ImageBitmap.imageResource(R.drawable.butterscotch_logo_plus),
-                contentDescription = "Butterscotch Plus logo",
-                // Nearest-neighbor keeps the pixel-art crisp when scaled up
-                filterQuality = FilterQuality.None,
-                modifier = Modifier
-                    .size(160.dp)
-                    .offset { IntOffset(0, offsetY.dp.roundToPx()) },
-            )
+            ButterscotchBobImage(R.drawable.butterscotch_logo_plus, "Butterscotch Plus logo")
 
             Text("Butterscotch Plus", style = MaterialTheme.typography.headlineMedium)
 

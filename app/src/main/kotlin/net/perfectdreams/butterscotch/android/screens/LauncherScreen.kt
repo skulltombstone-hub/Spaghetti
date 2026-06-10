@@ -74,6 +74,7 @@ import net.perfectdreams.butterscotch.android.R
 import net.perfectdreams.butterscotch.android.Route
 import net.perfectdreams.butterscotch.android.billing.BillingManager
 import net.perfectdreams.butterscotch.android.components.BannerAd
+import net.perfectdreams.butterscotch.android.components.ButterscotchBobImage
 import net.perfectdreams.butterscotch.android.components.ButterscotchTopBar
 import net.perfectdreams.butterscotch.android.library.GameEntry
 import net.perfectdreams.butterscotch.android.library.GameLibrary
@@ -172,26 +173,7 @@ fun LauncherScreen(
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                val transition = rememberInfiniteTransition(label = "logoBob")
-                val offsetY by transition.animateFloat(
-                    initialValue = 0f,
-                    targetValue = -12f,
-                    animationSpec = infiniteRepeatable(
-                        animation = tween(1_800, easing = EaseInOut),
-                        repeatMode = RepeatMode.Reverse,
-                    ),
-                    label = "offsetY",
-                )
-
-                Image(
-                    bitmap = ImageBitmap.imageResource(R.drawable.butterscotch_logo),
-                    contentDescription = "Butterscotch logo",
-                    // Nearest-neighbor keeps the pixel-art crisp when scaled up
-                    filterQuality = FilterQuality.None,
-                    modifier = Modifier
-                        .size(160.dp)
-                        .offset { IntOffset(0, offsetY.dp.roundToPx()) },
-                )
+                ButterscotchBobImage(R.drawable.butterscotch_logo, "Butterscotch logo")
 
                 Text(
                     "Welcome to Butterscotch!",
