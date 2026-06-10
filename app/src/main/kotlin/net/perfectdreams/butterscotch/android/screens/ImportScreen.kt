@@ -61,8 +61,10 @@ import kotlinx.serialization.json.Json
 import net.perfectdreams.butterscotch.android.BuildConfig
 import net.perfectdreams.butterscotch.android.ButterscotchUtils
 import net.perfectdreams.butterscotch.android.GameImporter
+import net.perfectdreams.butterscotch.android.R
 import net.perfectdreams.butterscotch.android.components.ButterscotchBackButton
 import net.perfectdreams.butterscotch.android.components.ButterscotchTopBar
+import net.perfectdreams.butterscotch.android.components.FrameAnimationImage
 import net.perfectdreams.butterscotch.android.components.MetadataForm
 import net.perfectdreams.butterscotch.android.components.rememberGameMetadataFormState
 import net.perfectdreams.butterscotch.android.layouts.LayoutLibrary
@@ -267,6 +269,14 @@ private fun IntroPane(onSelectFolder: () -> Unit, onSelectZip: () -> Unit, onSel
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        FrameAnimationImage(
+            frames = listOf(R.drawable.import_1, R.drawable.import_2),
+            frameDurationMs = 250,
+            contentDescription = null,
+            // The frames are 31x20, so we scale them up while keeping the aspect ratio intact
+            modifier = Modifier.size(124.dp, 80.dp),
+        )
+        Spacer(Modifier.height(24.dp))
         Text(
             "Select a folder or a ZIP with a GameMaker WAD file (${GameImporter.WAD_FILENAMES.joinToString(", ")})",
             style = MaterialTheme.typography.bodyLarge,
