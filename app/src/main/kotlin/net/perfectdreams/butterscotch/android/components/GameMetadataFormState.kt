@@ -13,7 +13,7 @@ import java.util.UUID
 /**
  * The editable fields of [MetadataForm], hoisted into a single state holder.
  *
- * The form mutates these directly; the screens read them back on Save.
+ * The form mutates these directly; the screens read them back when committing (Import button, or on back for Game Settings).
  */
 @Stable
 class GameMetadataFormState(

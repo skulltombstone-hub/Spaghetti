@@ -55,13 +55,16 @@ import kotlin.math.roundToInt
 
 /**
  * A shared game metadata editor.
+ *
+ * When [onSave] is null no save button is rendered, for screens that persist the state themselves (e.g. on back).
  */
 @Composable
 fun MetadataForm(
     layoutLibrary: LayoutLibrary,
     state: GameMetadataFormState,
-    onSave: () -> Unit,
-    saveEnabled: Boolean,
+    onSave: (() -> Unit)?,
+    saveEnabled: Boolean = true,
+    saveLabel: String = "Save",
     loadCandidates: suspend () -> List<IconCandidate>,
     modifier: Modifier = Modifier
 ) {
@@ -156,14 +159,16 @@ fun MetadataForm(
             onChange = { state.postProcessing = it },
         )
 
-        Spacer(Modifier.height(24.dp))
+        if (onSave != null) {
+            Spacer(Modifier.height(24.dp))
 
-        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
-            Column(
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Button(onClick = onSave, enabled = saveEnabled) { Text("Save") }
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Button(onClick = onSave, enabled = saveEnabled) { Text(saveLabel) }
+                }
             }
         }
     }
@@ -241,9 +246,9 @@ fun LayoutDropdown(
     }
 }
 
-// Picks which OS the runner reports to the game through GML's os_type / os_* builtins. Staged and
-// committed on Save just like the layout dropdowns. Most games never read os_type, but chapter-aware
-// or platform-gated titles can branch on it.
+// Picks which OS the runner reports to the game through GML's os_type / os_* builtins. Staged in the
+// form state and committed by the host screen just like the layout dropdowns. Most games never read
+// os_type, but chapter-aware or platform-gated titles can branch on it.
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 private fun OsDropdown(
@@ -279,7 +284,7 @@ private fun OsDropdown(
 }
 
 // Labeled on/off switch row for a physical-input source (controllers, keyboard). Staged and
-// committed on Save like the other fields. Off is an escape hatch for games that misbehave when
+// committed by the host screen like the other fields. Off is an escape hatch for games that misbehave when
 // that input is attached (e.g. ones that auto-switch to a console UI when a controller appears).
 @Composable
 fun InputToggle(
@@ -359,7 +364,7 @@ fun PostProcessingSection(
 }
 
 // Sliders for each CRT effect strength (0..100%). Edits write straight back through onChange so the preview state
-// stays live; the values only persist when the surrounding form is saved.
+// stays live; the values only persist when the host screen commits the form state.
 @Composable
 private fun CrtSettingsDialog(
     settings: GameEntry.CrtSettings,

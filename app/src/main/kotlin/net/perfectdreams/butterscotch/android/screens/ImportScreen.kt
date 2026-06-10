@@ -331,6 +331,7 @@ private fun ConfigurePane(
         state = state,
         loadCandidates = { result.iconCandidates },
         saveEnabled = state.title.isNotBlank(),
+        saveLabel = "Import",
         onSave = { onSave(state.title.ifBlank { initial }, state.selectedIcon, state.portraitLayout, state.landscapeLayout, state.runnerOs, state.enablePhysicalControllers, state.enablePhysicalKeyboard, state.enableWidescreenHack, state.postProcessing) },
     )
 }

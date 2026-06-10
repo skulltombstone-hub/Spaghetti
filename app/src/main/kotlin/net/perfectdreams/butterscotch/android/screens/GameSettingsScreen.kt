@@ -8,6 +8,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -52,15 +53,21 @@ fun GameSettingsScreen(
         postProcessing = entry.postProcessing
     )
 
-    // The baseline is the persisted entry, so we only write back what the user actually touched instead of rewriting (and cache-invalidating) every field on Save.
-    val titleChanged = state.titleTrimmed.isNotBlank() && state.titleTrimmed != entry.title
-    val iconChanged = state.selectedIcon !== originalIcon
-    val layoutsChanged = state.portraitLayout != entry.portraitLayout || state.landscapeLayout != entry.landscapeLayout
-    val runnerOsChanged = state.runnerOs != entry.runnerOs
-    val controllersChanged = state.enablePhysicalControllers != entry.enablePhysicalControllers
-    val keyboardChanged = state.enablePhysicalKeyboard != entry.enablePhysicalKeyboard
-    val widescreenHackChanged = state.enableWidescreenHack != entry.enableWidescreenHack
-    val postProcessingChanged = state.postProcessing != entry.postProcessing
+    // Changes persist when the screen leaves composition (back press or navigating away), there is no explicit Save button
+    // The diffs are computed inside onDispose because the lambda captures the state holder, not the flag values, and we only
+    // write back what the user actually touched instead of rewriting (and cache-invalidating) every field
+    DisposableEffect(Unit) {
+        onDispose {
+            if (state.titleTrimmed.isNotBlank() && state.titleTrimmed != entry.title) gameLibrary.setTitle(entry.id, state.titleTrimmed)
+            if (state.selectedIcon !== originalIcon) gameLibrary.setIcon(entry.id, state.selectedIcon)
+            if (state.portraitLayout != entry.portraitLayout || state.landscapeLayout != entry.landscapeLayout) gameLibrary.update(entry.id) { it.copy(portraitLayout = state.portraitLayout, landscapeLayout = state.landscapeLayout) }
+            if (state.runnerOs != entry.runnerOs) gameLibrary.update(entry.id) { it.copy(runnerOs = state.runnerOs) }
+            if (state.enablePhysicalControllers != entry.enablePhysicalControllers) gameLibrary.update(entry.id) { it.copy(enablePhysicalControllers = state.enablePhysicalControllers) }
+            if (state.enablePhysicalKeyboard != entry.enablePhysicalKeyboard) gameLibrary.update(entry.id) { it.copy(enablePhysicalKeyboard = state.enablePhysicalKeyboard) }
+            if (state.enableWidescreenHack != entry.enableWidescreenHack) gameLibrary.update(entry.id) { it.copy(enableWidescreenHack = state.enableWidescreenHack) }
+            if (state.postProcessing != entry.postProcessing) gameLibrary.update(entry.id) { it.copy(postProcessing = state.postProcessing) }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -72,18 +79,7 @@ fun GameSettingsScreen(
                 layoutLibrary = layoutLibrary,
                 state = state,
                 loadCandidates = { scanIconCandidates(gameLibrary.bundleDir(entry)) },
-                saveEnabled = titleChanged || iconChanged || layoutsChanged || runnerOsChanged || controllersChanged || keyboardChanged || widescreenHackChanged || postProcessingChanged,
-                onSave = {
-                    if (titleChanged) gameLibrary.setTitle(entry.id, state.titleTrimmed)
-                    if (iconChanged) gameLibrary.setIcon(entry.id, state.selectedIcon)
-                    if (layoutsChanged) gameLibrary.update(entry.id) { it.copy(portraitLayout = state.portraitLayout, landscapeLayout = state.landscapeLayout) }
-                    if (runnerOsChanged) gameLibrary.update(entry.id) { it.copy(runnerOs = state.runnerOs) }
-                    if (controllersChanged) gameLibrary.update(entry.id) { it.copy(enablePhysicalControllers = state.enablePhysicalControllers) }
-                    if (keyboardChanged) gameLibrary.update(entry.id) { it.copy(enablePhysicalKeyboard = state.enablePhysicalKeyboard) }
-                    if (widescreenHackChanged) gameLibrary.update(entry.id) { it.copy(enableWidescreenHack = state.enableWidescreenHack) }
-                    if (postProcessingChanged) gameLibrary.update(entry.id) { it.copy(postProcessing = state.postProcessing) }
-                    nav.popBackStack()
-                },
+                onSave = null,
             )
         }
     }
