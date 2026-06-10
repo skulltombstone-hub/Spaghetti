@@ -32,16 +32,22 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -311,22 +317,6 @@ private fun BoxScope.MenuSidebar(
     var isRoomWarpMenuOpen by remember { mutableStateOf(false) }
     var isSettingsOpen by remember { mutableStateOf(false) }
 
-    if (isSettingsOpen) {
-        SettingsBottomSheet(
-            onDismiss = { isSettingsOpen = false },
-            portraitLayouts = portraitLayouts,
-            landscapeLayouts = landscapeLayouts,
-            selectedPortraitLayoutId = selectedPortraitLayoutId,
-            selectedLandscapeLayoutId = selectedLandscapeLayoutId,
-            onSelectPortraitLayout = onSelectPortraitLayout,
-            onSelectLandscapeLayout = onSelectLandscapeLayout,
-            widescreenHackEnabled = widescreenHackEnabled,
-            onToggleWidescreenHack = onToggleWidescreenHack,
-            postProcessing = postProcessing,
-            onChangePostProcessing = onChangePostProcessing
-        )
-    }
-
     if (isRoomWarpMenuOpen) {
         var roomNameFilter by remember { mutableStateOf("") }
 
@@ -509,11 +499,36 @@ private fun BoxScope.MenuSidebar(
             }
         }
     }
+
+    // Composed after the scrim and the panel so it draws on top of the open menu
+    SettingsOverlay(
+        open = isSettingsOpen,
+        onDismiss = { isSettingsOpen = false },
+        portraitLayouts = portraitLayouts,
+        landscapeLayouts = landscapeLayouts,
+        selectedPortraitLayoutId = selectedPortraitLayoutId,
+        selectedLandscapeLayoutId = selectedLandscapeLayoutId,
+        onSelectPortraitLayout = onSelectPortraitLayout,
+        onSelectLandscapeLayout = onSelectLandscapeLayout,
+        widescreenHackEnabled = widescreenHackEnabled,
+        onToggleWidescreenHack = onToggleWidescreenHack,
+        postProcessing = postProcessing,
+        onChangePostProcessing = onChangePostProcessing
+    )
 }
 
+/**
+ * In-game settings as a full screen Scaffold, matching the look of the launcher's settings screens.
+ *
+ * Rendered in-hierarchy (no Dialog window, no separate activity) on purpose: a separate window
+ * doesn't inherit the activity's immersive fullscreen flags so the system bars would pop back in
+ * while it's open, and a separate activity can't happen because the runner state is process-local
+ * and tied to this activity's surface.
+ */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
-private fun SettingsBottomSheet(
+private fun SettingsOverlay(
+    open: Boolean,
     onDismiss: () -> Unit,
     portraitLayouts: List<GamepadLayout>,
     landscapeLayouts: List<GamepadLayout>,
@@ -526,63 +541,91 @@ private fun SettingsBottomSheet(
     postProcessing: GameEntry.PostProcessingSettings,
     onChangePostProcessing: (GameEntry.PostProcessingSettings) -> Unit
 ) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(modifier = Modifier
-            .fillMaxWidth()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp)
-            .padding(bottom = 24.dp)) {
-            Text(
-                text = "Settings",
-                style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
+    // Registered after MenuOverlay's always-on BackHandler, and later-registered enabled handlers
+    // win, so while the screen is open back closes it instead of toggling the menu
+    BackHandler(enabled = open) {
+        onDismiss()
+    }
 
-            Text(
-                text = "Controls",
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
-                modifier = Modifier.padding(bottom = 8.dp),
-            )
+    AnimatedVisibility(
+        visible = open,
+        enter = slideInHorizontally(initialOffsetX = { it }),
+        exit = slideOutHorizontally(targetOffsetX = { it }),
+        modifier = Modifier.fillMaxSize()
+    ) {
+        // Scaffold is backed by a Surface, so it also blocks touches from falling through to the
+        // game and the virtual gamepad controls underneath
+        Scaffold(
+            topBar = {
+                // Same colors as ButterscotchTopBar, which we can't use directly here because it
+                // wants a NavHostController and GameActivity has no Compose navigation
+                TopAppBar(
+                    title = { Text("Settings") },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                        navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                    ),
+                    navigationIcon = {
+                        IconButton(onClick = onDismiss) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
+                    }
+                )
+            }
+        ) { innerPadding ->
+            Column(modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp, vertical = 16.dp)) {
 
-            LayoutDropdown(
-                label = "Portrait Layout",
-                selectedId = selectedPortraitLayoutId,
-                options = portraitLayouts,
-                onSelect = onSelectPortraitLayout,
-            )
+                Text(
+                    text = "Controls",
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    modifier = Modifier.padding(bottom = 8.dp),
+                )
 
-            Spacer(Modifier.height(16.dp))
+                LayoutDropdown(
+                    label = "Portrait Layout",
+                    selectedId = selectedPortraitLayoutId,
+                    options = portraitLayouts,
+                    onSelect = onSelectPortraitLayout,
+                )
 
-            LayoutDropdown(
-                label = "Landscape Layout",
-                selectedId = selectedLandscapeLayoutId,
-                options = landscapeLayouts,
-                onSelect = onSelectLandscapeLayout,
-            )
+                Spacer(Modifier.height(16.dp))
 
-            InputToggle(
-                "Enable Widescreen Hack",
-                "May cause visual glitches",
-                widescreenHackEnabled,
-                onToggleWidescreenHack
-            )
+                LayoutDropdown(
+                    label = "Landscape Layout",
+                    selectedId = selectedLandscapeLayoutId,
+                    options = landscapeLayouts,
+                    onSelect = onSelectLandscapeLayout,
+                )
 
-            Spacer(Modifier.height(16.dp))
+                InputToggle(
+                    "Enable Widescreen Hack",
+                    "May cause visual glitches",
+                    widescreenHackEnabled,
+                    onToggleWidescreenHack
+                )
 
-            Text(
-                text = "Video",
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
-                modifier = Modifier.padding(bottom = 8.dp),
-            )
+                Spacer(Modifier.height(16.dp))
 
-            PostProcessingSection(
-                settings = postProcessing,
-                onChange = onChangePostProcessing,
-            )
+                Text(
+                    text = "Video",
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    modifier = Modifier.padding(bottom = 8.dp),
+                )
+
+                PostProcessingSection(
+                    settings = postProcessing,
+                    onChange = onChangePostProcessing,
+                )
+            }
         }
     }
 }
