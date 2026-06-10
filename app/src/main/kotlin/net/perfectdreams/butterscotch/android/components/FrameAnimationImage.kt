@@ -1,6 +1,7 @@
 package net.perfectdreams.butterscotch.android.components
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -11,7 +12,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.res.imageResource
+import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
+import net.perfectdreams.butterscotch.android.R
+
+@Composable
+fun FrameAnimationImage(frames: List<Int>, frameDurationMs: Long, contentDescription: String?, originalImageWidth: Int, originalImageHeight: Int, scaleUpBy: Int, modifier: Modifier = Modifier) {
+    FrameAnimationImage(
+        frames = frames,
+        frameDurationMs = frameDurationMs,
+        contentDescription = contentDescription,
+        modifier = modifier.size((originalImageWidth * scaleUpBy).dp, (originalImageHeight * scaleUpBy).dp),
+    )
+}
+
 
 /**
  * Loops over a list of drawable frames, swapping the displayed frame every [frameDurationMs]

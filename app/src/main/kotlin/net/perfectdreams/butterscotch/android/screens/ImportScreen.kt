@@ -22,6 +22,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.Button
@@ -247,7 +249,7 @@ fun ImportScreen(
                         }
                     } else {
                         Column(
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
                             verticalArrangement = Arrangement.Center,
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
@@ -265,16 +267,17 @@ fun ImportScreen(
 @Composable
 private fun IntroPane(onSelectFolder: () -> Unit, onSelectZip: () -> Unit, onSelectSample: () -> (Unit)) {
     Column(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         FrameAnimationImage(
             frames = listOf(R.drawable.import_1, R.drawable.import_2),
-            frameDurationMs = 250,
+            frameDurationMs = 500,
             contentDescription = null,
-            // The frames are 31x20, so we scale them up while keeping the aspect ratio intact
-            modifier = Modifier.size(124.dp, 80.dp),
+            originalImageWidth = 32,
+            originalImageHeight = 22,
+            scaleUpBy = 4
         )
         Spacer(Modifier.height(24.dp))
         Text(
@@ -300,7 +303,7 @@ private fun IntroPane(onSelectFolder: () -> Unit, onSelectZip: () -> Unit, onSel
 @Composable
 private fun CopyingPane(currentFile: String?) {
     Column(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -349,7 +352,7 @@ private fun ConfigurePane(
 @Composable
 private fun ErrorPane(message: String, onDismiss: () -> Unit) {
     Column(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
