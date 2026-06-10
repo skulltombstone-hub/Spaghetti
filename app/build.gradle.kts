@@ -36,11 +36,6 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        ndk {
-            // Start small. Add x86_64 if you want to run in the emulator on an Intel/AMD host.
-            abiFilters += listOf("arm64-v8a")
-        }
-
         externalNativeBuild {
             cmake {
                 arguments += listOf(
@@ -80,7 +75,9 @@ android {
             // Upload native symbol tables so Play Console can symbolicate crashes inside the Butterscotch runtime
             ndk {
                 debugSymbolLevel = "SYMBOL_TABLE"
+                abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
             }
+
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -91,6 +88,10 @@ android {
             buildConfigField("boolean", "FORCE_BUTTERSCOTCH_PLUS", "true")
             buildConfigField("String", "API_BASE_URL", "\"http://192.168.15.125:8080\"")
             buildConfigField("String", "API_VERSION", "\"v1\"")
+
+            ndk {
+                abiFilters += listOf("arm64-v8a")
+            }
         }
     }
     compileOptions {
