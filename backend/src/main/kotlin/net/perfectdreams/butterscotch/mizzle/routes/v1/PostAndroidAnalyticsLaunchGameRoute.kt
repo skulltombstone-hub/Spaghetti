@@ -32,7 +32,7 @@ class PostAndroidAnalyticsLaunchGameRoute(val m: Mizzle) : APIv1Route("/android/
         m.transaction {
             val salt = ActiveSalts.selectAll().orderBy(ActiveSalts.generatedAt, SortOrder.DESC).limit(1).first()[ActiveSalts.salt]
 
-            val identifier = m.generateIdentifier(salt, ip)
+            val identifier = m.generateIdentifier(salt, ip, request.androidDeviceModel)
 
             AndroidAnalyticsLaunchGame.insert {
                 it[AndroidAnalyticsLaunchGame.launchedAt] = OffsetDateTime.now(ZoneOffset.UTC)
