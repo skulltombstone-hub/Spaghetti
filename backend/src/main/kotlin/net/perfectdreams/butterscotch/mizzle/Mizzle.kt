@@ -20,8 +20,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.addJsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonArray
+import kotlinx.serialization.json.putJsonObject
 import net.perfectdreams.butterscotch.mizzle.config.MizzleConfig
 import net.perfectdreams.butterscotch.mizzle.routes.v1.PostAndroidAnalyticsLaunchAppRoute
 import net.perfectdreams.butterscotch.mizzle.routes.v1.PostAndroidAnalyticsLaunchGameRoute
@@ -126,16 +129,36 @@ class Mizzle(val config: MizzleConfig, val database: Database) {
                 }
 
                 if (isNewer) {
-                    http.post(config.discordWebhookUrl) {
+                    http.post(config.discordWebhookUrl + "?with_components=true") {
                         contentType(ContentType.Application.Json)
                         setBody(
                             buildJsonObject {
                                 put(
                                     "content",
                                     buildString {
-                                        appendLine("<:butterscotch:1514351490515603659><:android_logo:1515489886692577332> **Version `${scrappedVersion.prettify()}` Released!** - [Play Store Link](<https://play.google.com/store/apps/details?id=net.perfectdreams.butterscotch&referrer=utm_source%3Ddiscord%26utm_medium%3Dreferral%26utm_content%3Dupdate-announcement>) <@&${config.discordUpdateRoleId}>")
+                                        appendLine("<:butterscotch:1514351490515603659><:android_logo:1515489886692577332> **Version `${scrappedVersion.prettify()}` Released!** <@&${config.discordUpdateRoleId}>")
                                     }
                                 )
+
+                                putJsonArray("components") {
+                                    addJsonObject {
+                                        put("type", 1)
+                                        putJsonArray("components") {
+                                            addJsonObject {
+                                                put("type", 2)
+                                                put("style", 5)
+                                                put("label", "Google Play")
+                                                put("url", "https://play.google.com/store/apps/details?id=net.perfectdreams.butterscotch&referrer=utm_source%3Ddiscord%26utm_medium%3Dreferral%26utm_content%3Dupdate-announcement")
+                                                putJsonObject("emoji") {
+                                                    put("id", "1515498288856436897")
+                                                    put("name", "google_play_logo")
+                                                    put("animated", false)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
                             }.toString()
                         )
                     }
