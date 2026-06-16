@@ -189,6 +189,8 @@ class Mizzle(val config: MizzleConfig, val database: Database) {
                 }
 
                 staticFiles("/samples", File(config.samplesPath))
+
+                staticFiles("/flowey", File(config.floweyPath))
             }
         }
         server.start(wait = true)

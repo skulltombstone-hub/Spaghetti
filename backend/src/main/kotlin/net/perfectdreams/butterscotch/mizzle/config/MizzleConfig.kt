@@ -5,6 +5,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class MizzleConfig(
     val samplesPath: String,
+    val floweyPath: String,
     val database: DatabaseConfig,
     val discordWebhookUrl: String,
     val discordUpdateRoleId: Long
