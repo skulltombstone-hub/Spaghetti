@@ -899,7 +899,7 @@ fun ProgressBar(percentage: Float) {
         }
 
         Box(modifier = Modifier.requiredWidth(32.dp)) {
-            Text("%.1f%%".format(percentage), style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
+            Text("%.1f%%".format(percentage * 100), style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
         }
     }
 }
