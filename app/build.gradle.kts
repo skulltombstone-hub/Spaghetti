@@ -178,8 +178,6 @@ dependencies {
     implementation(libs.androidx.documentfile)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.kotlinx.serialization.json)
-    implementation(libs.billing.ktx)
-    implementation(libs.play.services.ads)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
     implementation("io.ktor:ktor-client-cio:3.5.0")

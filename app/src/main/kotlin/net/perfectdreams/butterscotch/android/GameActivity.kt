@@ -12,7 +12,6 @@ import android.view.SurfaceHolder
 import android.view.SurfaceView
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
-import net.perfectdreams.butterscotch.android.billing.BillingManager
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -139,7 +138,7 @@ class GameActivity : ComponentActivity() {
             entry.enablePhysicalKeyboard,
             entry.enableWidescreenHack,
             entry.postProcessing,
-            BillingManager.getInstance(this.applicationContext).isPlus
+            true
         )
         this.butterscotchRunner = butterscotchRunner
 

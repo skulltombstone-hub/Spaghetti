@@ -23,7 +23,6 @@ import com.google.android.play.core.appupdate.AppUpdateOptions
 import com.google.android.play.core.appupdate.testing.FakeAppUpdateManager
 import com.google.android.play.core.install.model.AppUpdateType
 import com.google.android.play.core.install.model.UpdateAvailability
-import net.perfectdreams.butterscotch.android.billing.BillingManager
 import net.perfectdreams.butterscotch.android.theme.ButterscotchAndroidTheme
 import java.util.UUID
 
@@ -45,15 +44,7 @@ class MainActivity : ComponentActivity() {
         val layoutLibrary = Libraries.loadLayoutLibrary(this.applicationContext)
         val settingsStore = Libraries.loadSettingsStore(this.applicationContext)
 
-        val billing = BillingManager.getInstance(this.applicationContext)
-        billing.connect()
-
-        // Pro users never see ads, so there's no reason to spin up the AdMob SDK for them
-        if (!billing.isPlus) {
-            MobileAds.initialize(this.applicationContext)
-        }
-
-        ButterscotchUtils.fireAppLaunchEvent(billing.isPlus)
+        ButterscotchUtils.fireAppLaunchEvent(true)
 
         if (intent?.action == ACTION_LAUNCH_GAME) {
             val gameIdAsString = intent.getStringExtra(GameActivity.EXTRA_GAME_ID)
@@ -61,19 +52,14 @@ class MainActivity : ComponentActivity() {
             intent.action = null
             intent.removeExtra(GameActivity.EXTRA_GAME_ID)
             if (gameIdAsString != null) {
-                if (billing.isPlus) {
-                    val gameId = UUID.fromString(gameIdAsString)
+                val gameId = UUID.fromString(gameIdAsString)
 
-                    if (gameLibrary.findById(gameId) != null) {
-                        startActivity(Intent(this, GameActivity::class.java).apply {
-                            putExtra(GameActivity.EXTRA_GAME_ID, gameId.toString())
-                        })
-                        finish()
-                    }
-                    return
+                if (gameLibrary.findById(gameId) != null) {
+                    startActivity(Intent(this, GameActivity::class.java).apply {
+                        putExtra(GameActivity.EXTRA_GAME_ID, gameId.toString())
+                    })
+                    finish()
                 }
-
-                Toast.makeText(this.applicationContext, "You don't have Pro to use shortcuts!", Toast.LENGTH_LONG).show()
             }
             // Unknown/stale id: fall through to the normal launcher UI.
         }

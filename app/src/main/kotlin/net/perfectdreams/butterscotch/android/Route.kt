@@ -11,7 +11,6 @@ sealed interface Route {
     @Serializable data object Launcher : Route
     @Serializable data object ImportGame : Route
     @Serializable data object About : Route
-    @Serializable data object Plus : Route
     @Serializable data object Licenses : Route
     @Serializable data object GeneralSettings : Route
     @Serializable data object LayoutManager : Route

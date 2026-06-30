@@ -39,7 +39,6 @@ import net.perfectdreams.butterscotch.android.Route
 import net.perfectdreams.butterscotch.android.components.ButterscotchBackButton
 import net.perfectdreams.butterscotch.android.components.ButterscotchTopBar
 import net.perfectdreams.butterscotch.android.library.GameLibrary
-import net.perfectdreams.butterscotch.android.billing.BillingManager
 import net.perfectdreams.butterscotch.android.components.PlusBadge
 import net.perfectdreams.butterscotch.android.shortcuts.requestPinGameShortcut
 import java.util.UUID
@@ -63,7 +62,6 @@ fun SettingsScreen(
     val entry = library.findById(gameId) ?: return
 
     val context = LocalContext.current
-    val billing = remember { BillingManager.getInstance(context) }
     val pinShortcutsSupported = remember { ShortcutManagerCompat.isRequestPinShortcutSupported(context) }
     var showDeleteDialog by remember { mutableStateOf(false) }
 
@@ -97,10 +95,9 @@ fun SettingsScreen(
                         icon = Icons.AutoMirrored.Default.AddToHomeScreen,
                         title = "Add Shortcut to Home Screen",
                         subtitle = "Pin a launcher icon for this game",
-                        trailing = if (billing.isPlus) null else ({ PlusBadge() }),
+                        trailing = null,
                         onClick = {
-                            if (billing.isPlus) requestPinGameShortcut(context, library, entry) else nav.navigate(
-                                Route.Plus)
+                            requestPinGameShortcut(context, library, entry)
                         },
                     )
                 }

@@ -83,8 +83,6 @@ import androidx.navigation.NavHostController
 import net.perfectdreams.butterscotch.android.GameActivity
 import net.perfectdreams.butterscotch.android.R
 import net.perfectdreams.butterscotch.android.Route
-import net.perfectdreams.butterscotch.android.billing.BillingManager
-import net.perfectdreams.butterscotch.android.components.BannerAd
 import net.perfectdreams.butterscotch.android.components.ButterscotchBobImage
 import net.perfectdreams.butterscotch.android.components.ButterscotchTopBar
 import net.perfectdreams.butterscotch.android.components.FrameAnimationImage
@@ -109,7 +107,6 @@ fun LauncherScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     val context = LocalContext.current
-    val billing = remember { BillingManager.getInstance(context) }
     var menuExpanded by remember { mutableStateOf(false) }
 
     val _updateAvailableClickCallback = updateAvailableClickCallback
@@ -196,11 +193,22 @@ fun LauncherScreen(
                         )
 
                         DropdownMenuItem(
-                            leadingIcon = { Icon(Icons.Filled.Star, contentDescription = null) },
-                            text = { Text("Butterscotch Plus") },
+                            leadingIcon = { Icon(Icons.Filled.Star, contentDescription = null, modifier = Modifier.size(24.dp)) },
+                            text = { Text("Loritta") },
                             onClick = {
                                 menuExpanded = false
-                                nav.navigate(Route.Plus)
+                                val intent = Intent(Intent.ACTION_VIEW, "https://loritta.website/".toUri())
+                                context.startActivity(intent)
+                            },
+                        )
+
+                        DropdownMenuItem(
+                            leadingIcon = { Icon(painterResource(R.drawable.pickaxe), contentDescription = null, modifier = Modifier.size(24.dp)) },
+                            text = { Text("SparklyPower") },
+                            onClick = {
+                                menuExpanded = false
+                                val intent = Intent(Intent.ACTION_VIEW, "https://sparklypower.net/".toUri())
+                                context.startActivity(intent)
                             },
                         )
 
@@ -272,10 +280,6 @@ fun LauncherScreen(
                 // The entries are already sorted here
                 itemsIndexed(entries, key = { _, entry -> entry.id.toString() }) { index, entry ->
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        if (!billing.isPlus && index % 6 == 0) {
-                            BannerAd()
-                        }
-
                         GameTile(
                             library = library,
                             entry = entry,
