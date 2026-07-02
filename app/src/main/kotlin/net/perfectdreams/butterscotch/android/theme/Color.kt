@@ -2,19 +2,22 @@ package net.perfectdreams.butterscotch.android.theme
 
 import androidx.compose.ui.graphics.Color
 
-val ButterscotchPrimary = Color(0xFFB71C1C)
+// Cores principais
+val ButterscotchPrimary = Color(0xFFD64545)
 val ButterscotchOnPrimary = Color(0xFFFFFFFF)
-val ButterscotchPrimaryContainer = Color(0xFF7F0000)
-val ButterscotchOnPrimaryContainer = Color(0xFFFFCDD2)
+val ButterscotchPrimaryContainer = Color(0xFF8E1F1F)
+val ButterscotchOnPrimaryContainer = Color(0xFFFFDADA)
 
-val ButterscotchSecondary = Color(0xFFEF9A9A)
-val ButterscotchOnSecondary = Color(0xFF3A2A10)
+// Cores secundárias
+val ButterscotchSecondary = Color(0xFFC98A8A)
+val ButterscotchOnSecondary = Color(0xFF2A0D0D)
 
-val ButterscotchTertiary = Color(0xFFEF9A9A)
-val ButterscotchOnTertiary = Color(0xFF3A2A10)
+// Cores terciárias
+val ButterscotchTertiary = Color(0xFFB03030)
+val ButterscotchOnTertiary = Color(0xFFFFF0F0)
 
-val ButterscotchBackground = Color(0xFF0F0F0F)
-val ButterscotchSurface = Color(0xFF1A1A1A)
-
-val ButterscotchOnBackground = Color(0xFFECECEC)
-val ButterscotchOnSurface = Color(0xFFECECEC)
+// Fundo
+val ButterscotchBackground = Color(0xFF181212)
+val ButterscotchSurface = Color(0xFF241818)
+val ButterscotchOnBackground = Color(0xFFF7EAEA)
+val ButterscotchOnSurface = Color(0xFFF7EAEA)
