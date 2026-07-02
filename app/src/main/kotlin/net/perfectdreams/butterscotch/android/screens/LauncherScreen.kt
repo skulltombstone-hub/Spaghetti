@@ -162,7 +162,7 @@ fun LauncherScreen(
         topBar = {
             ButterscotchTopBar(
                 title = {
-                    Text("Butterscotch")
+                    Text("Spaghetti")
                 },
                 nav = nav,
                 actions = {
