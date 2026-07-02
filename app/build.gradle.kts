@@ -14,25 +14,25 @@ plugins {
 // Signing settings
 val keystorePropertiesFile = rootProject.file("keystore.properties")
 val keystoreProperties = Properties().apply {
-    if (keystorePropertiesFile.exists()) keystorePropertiesFile.inputStream().use { load(it) }
+    if (keystorePropertiesFile.exists()) {
+        keystorePropertiesFile.inputStream().use { load(it) }
+    }
 }
 
+// ⚠️ ainda aponta pro runtime original (não quebrar build agora)
 val butterscotchRepoDir = file("../../Butterscotch")
 
 android {
-    namespace = "net.perfectdreams.butterscotch.android"
-    compileSdk {
-        version = release(36) {
-            minorApiLevel = 1
-        }
-    }
+    namespace = "net.perfectdreams.spaghetti"
+    compileSdk = 36
 
     defaultConfig {
-        applicationId = "net.perfectdreams.butterscotch"
+        applicationId = "net.perfectdreams.spaghetti"
         minSdk = 24
         targetSdk = 36
-        versionCode = 32
-        versionName = "2026.06.21-1"
+
+        versionCode = 1
+        versionName = "0.1-spaghetti"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -64,15 +64,15 @@ android {
 
     buildTypes {
         release {
-            buildConfigField("boolean", "FORCE_BUTTERSCOTCH_PLUS", "false")
-            buildConfigField("String", "API_BASE_URL", "\"https://mizzle.butterscotch.gg\"")
+            buildConfigField("boolean", "FORCE_SPAGHETTI_PLUS", "false")
+            buildConfigField("String", "API_BASE_URL", "\"https://mizzle.spaghetti.gg\"")
             buildConfigField("String", "API_VERSION", "\"v1\"")
 
             isMinifyEnabled = true
             isShrinkResources = true
-            signingConfig = if (keystorePropertiesFile.exists()) signingConfigs.getByName("release") else null
+            signingConfig = if (keystorePropertiesFile.exists())
+                signingConfigs.getByName("release") else null
 
-            // Upload native symbol tables so Play Console can symbolicate crashes inside the Butterscotch runtime
             ndk {
                 debugSymbolLevel = "SYMBOL_TABLE"
                 abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
@@ -85,7 +85,7 @@ android {
         }
 
         debug {
-            buildConfigField("boolean", "FORCE_BUTTERSCOTCH_PLUS", "true")
+            buildConfigField("boolean", "FORCE_SPAGHETTI_PLUS", "true")
             buildConfigField("String", "API_BASE_URL", "\"http://192.168.15.125:8080\"")
             buildConfigField("String", "API_VERSION", "\"v1\"")
 
@@ -94,10 +94,12 @@ android {
             }
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
     buildFeatures {
         compose = true
         buildConfig = true
@@ -105,18 +107,19 @@ android {
 
     externalNativeBuild {
         cmake {
-            // Point straight at the Butterscotch repo's root CMakeLists.txt.
-            // Adjust if your checkout layout differs.
             path = File(butterscotchRepoDir, "CMakeLists.txt")
             version = "3.22.1"
         }
     }
-
 }
 
+/**
+ * Mantido por enquanto (compatibilidade com runtime nativo)
+ */
 abstract class GenerateContributorsTask : DefaultTask() {
+
     @get:Input
-    abstract val repoPath: Property<String>
+    abstract val repoPath: org.gradle.api.provider.Property<String>
 
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
@@ -124,8 +127,10 @@ abstract class GenerateContributorsTask : DefaultTask() {
     @TaskAction
     fun generate() {
         val repoDir = File(repoPath.get())
-        if (!repoDir.resolve(".git").exists())
-            error("The Butterscotch repository is not a real git repository!")
+
+        if (!repoDir.resolve(".git").exists()) {
+            error("Runtime repository is not a real git repository!")
+        }
 
         val process = ProcessBuilder(
             "git", "-C", repoDir.absolutePath, "log", "--format=%aN"
@@ -144,6 +149,7 @@ abstract class GenerateContributorsTask : DefaultTask() {
                 .toList()
 
         val rawDir = outputDir.get().asFile.resolve("raw").apply { mkdirs() }
+
         rawDir.resolve("contributors.txt")
             .writeText(contributors.joinToString("\n"))
     }
@@ -151,18 +157,23 @@ abstract class GenerateContributorsTask : DefaultTask() {
 
 androidComponents {
     onVariants { variant ->
-        val taskName = "generate${variant.name.replaceFirstChar { it.uppercase() }}Contributors"
+        val taskName =
+            "generate${variant.name.replaceFirstChar { it.uppercase() }}Contributors"
+
         val generateTask = tasks.register(taskName, GenerateContributorsTask::class.java) {
             repoPath.set(butterscotchRepoDir.absolutePath)
         }
+
         variant.sources.res?.addGeneratedSourceDirectory(
-            generateTask, GenerateContributorsTask::outputDir
+            generateTask,
+            GenerateContributorsTask::outputDir
         )
     }
 }
 
 dependencies {
     implementation(project(":common"))
+
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
 
     implementation(platform(libs.androidx.compose.bom))
@@ -179,16 +190,22 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
     implementation("io.ktor:ktor-client-cio:3.5.0")
+
     implementation("com.google.android.play:app-update:2.1.0")
     implementation("com.google.android.play:app-update-ktx:2.1.0")
+
     implementation("androidx.fragment:fragment-ktx:1.8.5")
+
     testImplementation(libs.junit)
+
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)
+
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }
