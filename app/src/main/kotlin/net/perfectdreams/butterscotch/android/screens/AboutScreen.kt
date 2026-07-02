@@ -67,11 +67,11 @@ fun AboutScreen(nav: NavHostController) {
 
             Spacer(Modifier.height(4.dp))
 
-            Text("\"Finally... Droidtale 2\"", style = MaterialTheme.typography.headlineSmall.copy(fontStyle = FontStyle.Italic))
+            Text("\"Finally... Droidtale 3 - Now more than GameMaker\"", style = MaterialTheme.typography.headlineSmall.copy(fontStyle = FontStyle.Italic))
 
             Spacer(Modifier.height(16.dp))
 
-            Text("Created by MrPowerGamerBR", style = MaterialTheme.typography.bodyLarge)
+            Text("Created by MrPowerGamerBR, forked and mantained by Migi64", style = MaterialTheme.typography.bodyLarge)
 
             Spacer(Modifier.height(24.dp))
             Text("Contributors", style = MaterialTheme.typography.titleMedium)
