@@ -23,7 +23,7 @@ val keystoreProperties = Properties().apply {
 val butterscotchRepoDir = file("../../Butterscotch")
 
 android {
-    namespace = "net.perfectdreams.spaghetti"
+    namespace = "net.perfectdreams.butterscotch.android"
     compileSdk = 36
 
     defaultConfig {
