@@ -1,0 +1,141 @@
+name: Build Spaghetti APK
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: build-spaghetti
+  cancel-in-progress: true
+
+env:
+  JAVA_VERSION: "21"
+  RUNTIME_REPOSITORY: ButterscotchRunner/Butterscotch
+  RUNTIME_REF: main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Spaghetti
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          path: Spaghetti
+
+      - name: Checkout Latest Butterscotch Runtime
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.RUNTIME_REPOSITORY }}
+          ref: ${{ env.RUNTIME_REF }}
+          fetch-depth: 0
+          path: Butterscotch
+
+      - name: Show Workspace
+        run: |
+          pwd
+          echo "===================="
+          ls -la
+          echo "===================="
+          ls -la Spaghetti
+          echo "===================="
+          ls -la Butterscotch
+
+      - name: Verify Runtime
+        run: |
+          test -f Butterscotch/CMakeLists.txt || {
+            echo "CMakeLists.txt not found!"
+            exit 1
+          }
+
+          test -d Butterscotch/.git || {
+            echo ".git directory not found!"
+            exit 1
+          }
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: gradle
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Accept Android Licenses
+        run: yes | sdkmanager --licenses
+
+      - name: Install SDK Packages
+        run: |
+          sdkmanager \
+            "platform-tools" \
+            "platforms;android-36" \
+            "build-tools;36.0.0" \
+            "cmake;3.22.1" \
+            "ndk;29.0.13846066"
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('Spaghetti/**/*.gradle*','Spaghetti/**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}
+
+      - name: Cache Android Build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.android
+            ~/.cache
+          key: android-${{ runner.os }}
+
+      - name: Make Gradle Executable
+        working-directory: Spaghetti
+        run: chmod +x gradlew
+
+      - name: Build Release APK
+        working-directory: Spaghetti
+        run: |
+          ./gradlew \
+            clean \
+            assembleRelease \
+            --stacktrace \
+            --info \
+            --warning-mode all
+
+      - name: Upload APKs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Spaghetti-APK
+          path: |
+            Spaghetti/app/build/outputs/**/*.apk
+
+      - name: Upload Native Symbols
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Native-Symbols
+          path: |
+            Spaghetti/**/native-debug-symbols.zip
+
+      - name: Upload Mapping
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Proguard-Mapping
+          path: |
+            Spaghetti/**/mapping.txt
+
+      - name: Upload Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Build-Reports
+          path: |
+            Spaghetti/**/reports/**
+            Spaghetti/**/outputs/logs/**
