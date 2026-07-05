@@ -1,0 +1,84 @@
+name: Spaghetti Android Build (Supreme CI)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # =========================
+      # 1. Checkout Android fork
+      # =========================
+      - name: Checkout Spaghetti
+        uses: actions/checkout@v4
+        with:
+          path: Spaghetti
+
+      # =========================
+      # 2. Checkout ENGINE (FULL GIT)
+      # =========================
+      - name: Checkout Butterscotch Engine (FULL HISTORY)
+        uses: actions/checkout@v4
+        with:
+          repository: skulltombstone-hub/Butterscotch
+          path: Butterscotch
+          fetch-depth: 0   # 🔥 CRÍTICO (resolve generateDebugContributors)
+
+      # =========================
+      # 3. Setup Java
+      # =========================
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      # =========================
+      # 4. Setup Android SDK
+      # =========================
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      # =========================
+      # 5. VERIFY ENGINE GIT (debug safety)
+      # =========================
+      - name: Verify Engine Git Integrity
+        run: |
+          cd Butterscotch
+          git rev-parse --is-inside-work-tree
+          git log -1 --oneline
+
+      # =========================
+      # 6. FIX ANDROID PATH (engine link)
+      # =========================
+      - name: Fix Engine Path in Gradle
+        run: |
+          sed -i 's|\.\./\.\./Butterscotch|../Butterscotch|g' Spaghetti/app/build.gradle.kts || true
+
+      # =========================
+      # 7. MAKE GRADLE EXECUTABLE
+      # =========================
+      - name: Grant Gradle Permission
+        run: chmod +x Spaghetti/gradlew
+
+      # =========================
+      # 8. BUILD (WITH FULL DEBUG)
+      # =========================
+      - name: Build Debug APK
+        working-directory: Spaghetti
+        run: |
+          ./gradlew clean
+          ./gradlew assembleDebug --stacktrace --warning-mode all
+
+      # =========================
+      # 9. UPLOAD APK
+      # =========================
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: spaghetti-debug-apk
+          path: Spaghetti/app/build/outputs/apk/debug/*.apk
