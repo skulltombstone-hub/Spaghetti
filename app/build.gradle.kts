@@ -23,11 +23,11 @@ val keystoreProperties = Properties().apply {
 val butterscotchRepoDir = file("../../Butterscotch")
 
 android {
-    namespace = "net.perfectdreams.butterscotch.android"
+    namespace = "net.migi64.spaghetti.android"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "net.perfectdreams.spaghetti"
+        applicationId = "net.migi64.spaghetti"
         minSdk = 24
         targetSdk = 36
 
@@ -116,44 +116,6 @@ android {
 /**
  * Mantido por enquanto (compatibilidade com runtime nativo)
  */
-abstract class GenerateContributorsTask : DefaultTask() {
-
-    @get:Input
-    abstract val repoPath: org.gradle.api.provider.Property<String>
-
-    @get:OutputDirectory
-    abstract val outputDir: DirectoryProperty
-
-    @TaskAction
-    fun generate() {
-        val repoDir = File(repoPath.get())
-
-        if (!repoDir.resolve(".git").exists()) {
-            error("Runtime repository is not a real git repository!")
-        }
-
-        val process = ProcessBuilder(
-            "git", "-C", repoDir.absolutePath, "log", "--format=%aN"
-        ).redirectErrorStream(true).start()
-
-        val rawAuthors = process.inputStream.bufferedReader().use { it.readLines() }
-        process.waitFor()
-
-        val contributors = if (process.exitValue() != 0) emptyList() else
-            rawAuthors.asSequence()
-                .map { it.trim() }
-                .filter { it.isNotEmpty() }
-                .filter { !it.equals("MrPowerGamerBR", ignoreCase = true) }
-                .distinct()
-                .sortedBy { it.lowercase() }
-                .toList()
-
-        val rawDir = outputDir.get().asFile.resolve("raw").apply { mkdirs() }
-
-        rawDir.resolve("contributors.txt")
-            .writeText(contributors.joinToString("\n"))
-    }
-}
 
 androidComponents {
     onVariants { variant ->
