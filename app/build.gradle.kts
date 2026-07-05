@@ -23,11 +23,11 @@ val keystoreProperties = Properties().apply {
 val butterscotchRepoDir = file("../../Butterscotch")
 
 android {
-    namespace = "net.migi64.spaghetti.android"
+    namespace = "net.perfectdreams.butterscotch.android"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "net.migi64.spaghetti"
+        applicationId = "net.perfectdreams.butterscotch"
         minSdk = 24
         targetSdk = 36
 
