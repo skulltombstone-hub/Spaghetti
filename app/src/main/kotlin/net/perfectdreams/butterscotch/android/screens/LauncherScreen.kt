@@ -248,7 +248,7 @@ fun LauncherScreen(
                 ButterscotchBobImage(R.drawable.butterscotch_logo, "Butterscotch logo")
 
                 Text(
-                    "Welcome to Butterscotch!",
+                    "Welcome to Spaghetti!",
                     style = MaterialTheme.typography.headlineLarge,
                     textAlign = TextAlign.Center
                 )
