@@ -53,20 +53,13 @@ jobs:
           git log -1 --oneline
 
       # =========================
-      # 6. FIX ANDROID PATH (engine link)
-      # =========================
-      - name: Fix Engine Path in Gradle
-        run: |
-          sed -i 's|\.\./\.\./Butterscotch|../Butterscotch|g' Spaghetti/app/build.gradle.kts || true
-
-      # =========================
-      # 7. MAKE GRADLE EXECUTABLE
+      # 6. MAKE GRADLE EXECUTABLE
       # =========================
       - name: Grant Gradle Permission
         run: chmod +x Spaghetti/gradlew
 
       # =========================
-      # 8. BUILD (WITH FULL DEBUG)
+      # 7. BUILD (WITH FULL DEBUG)
       # =========================
       - name: Build Debug APK
         working-directory: Spaghetti
@@ -75,7 +68,7 @@ jobs:
           ./gradlew assembleDebug --stacktrace --warning-mode all
 
       # =========================
-      # 9. UPLOAD APK
+      # 8. UPLOAD APK
       # =========================
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
