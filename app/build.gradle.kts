@@ -1,9 +1,4 @@
 import java.util.Properties
-import org.gradle.api.DefaultTask
-import org.gradle.api.file.DirectoryProperty
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.OutputDirectory
-import org.gradle.api.tasks.TaskAction
 
 plugins {
     alias(libs.plugins.android.application)
@@ -114,24 +109,9 @@ android {
 }
 
 /**
- * Mantido por enquanto (compatibilidade com runtime nativo)
+ * Removido: GenerateContributorsTask + androidComponents
+ * (dependência inexistente quebrava o build)
  */
-
-androidComponents {
-    onVariants { variant ->
-        val taskName =
-            "generate${variant.name.replaceFirstChar { it.uppercase() }}Contributors"
-
-        val generateTask = tasks.register(taskName, GenerateContributorsTask::class.java) {
-            repoPath.set(butterscotchRepoDir.absolutePath)
-        }
-
-        variant.sources.res?.addGeneratedSourceDirectory(
-            generateTask,
-            GenerateContributorsTask::outputDir
-        )
-    }
-}
 
 dependencies {
     implementation(project(":common"))
