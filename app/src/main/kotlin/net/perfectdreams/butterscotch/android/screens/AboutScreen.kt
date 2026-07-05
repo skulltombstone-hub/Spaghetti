@@ -76,8 +76,7 @@ fun AboutScreen(nav: NavHostController) {
             Spacer(Modifier.height(24.dp))
             Text("Contributors", style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(8.dp))
-            contributors.forEach { name ->
-                Text(name, style = MaterialTheme.typography.bodyMedium)
+            Text("https://github.com/ButterscotchRunner/Butterscotch/graphs/contributors", style = MaterialTheme.typography.bodyMedium)
             }
 
             Spacer(Modifier.height(24.dp))
