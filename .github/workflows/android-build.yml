@@ -1,0 +1,50 @@
+name: Android APK Build (Spaghetti)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Spaghetti (Android fork)
+        uses: actions/checkout@v4
+        with:
+          path: Spaghetti
+
+      - name: Checkout Butterscotch engine
+        uses: actions/checkout@v4
+        with:
+          repository: skulltombstone-hub/Butterscotch
+          path: Butterscotch
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Fix Gradle engine path
+        run: |
+          sed -i 's|\.\./\.\./Butterscotch|../Butterscotch|g' Spaghetti/app/build.gradle.kts || true
+
+      - name: Grant Gradle permission
+        run: chmod +x Spaghetti/gradlew
+
+      - name: Build Debug APK
+        working-directory: Spaghetti
+        run: |
+          ./gradlew clean
+          ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: spaghetti-debug-apk
+          path: Spaghetti/app/build/outputs/apk/debug/*.apk
