@@ -1,12 +1,12 @@
-Spaghetti
+#Spaghetti
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/skulltombstone-hub/Spaghetti/refs/heads/main/app/src/main/res/drawable/butterscotch_logo.png" width="512" />
+  <img src="https://raw.githubusercontent.com/skulltombstone-hub/Spaghetti/refs/heads/main/app/src/main/res/drawable/butterscotch_logo.png" width="256" />
 </p><p align="center">
   A universal game runtime launcher for Android.
-</p>---
+</p>
 
-About
+#About
 
 Spaghetti is an open-source Android application designed to provide a unified platform for running games created with different engines and frameworks.
 
@@ -14,9 +14,8 @@ The project started with support for GameMaker games through the Butterscotch ru
 
 The long-term goal of Spaghetti is to become a multi-engine runtime platform capable of supporting several popular game creation tools, allowing users to preserve and play games from different ecosystems on modern devices.
 
----
 
-Current Supported Engines
+#Current Supported Engines
 
 ✅ GameMaker
 
@@ -26,9 +25,8 @@ Supported versions and compatibility depend on the capabilities of the runtime i
 
 At the moment, this is the only officially supported engine.
 
----
 
-Future Support
+#Future Support
 
 Spaghetti is planned to expand support for additional engines and formats:
 
@@ -50,9 +48,8 @@ Unlike some other engines, Ren'Py cannot simply be added through a small compati
 
 Because of this, Ren'Py support is considered a very long-term objective.
 
----
 
-Project Structure
+#Project Structure
 
 Spaghetti works together with external runtimes.
 
@@ -90,9 +87,8 @@ Spaghetti
  │
  └── Ren'Py Runtime (future)
 
----
 
-Goals
+#Goals
 
 The main goals of Spaghetti are:
 
@@ -102,9 +98,8 @@ The main goals of Spaghetti are:
 - Avoid requiring the original development environment to run games
 - Keep old projects accessible for future generations
 
----
 
-Development Status
+#Development Status
 
 Spaghetti is currently under active development.
 
@@ -117,31 +112,28 @@ Current focus:
 - Improving runtime integration
 - Preparing the architecture for future engines
 
----
 
-Contributing
+#Contributing
 
 Contributions are welcome!
 
 You can help by:
 
-- Improving compatibility
-- Fixing bugs
-- Testing games
-- Developing new runtime modules
-- Improving documentation
+- #Improving compatibility (Please contact me via the email address on my profile page.)
+- #Fixing bugs (Please contact me via the email address on my profile page.)
+- #Testing games (If you discover a bug, open an issue and be careful with spam replies.)
+- #Developing new runtime modules (Please contact me via the email address on my profile page.)
+- #Improving documentation (Please contact me via the email address on my profile page.)
 
 Before contributing, please check the project structure and existing issues.
 
----
 
-License
+#License
 
 See the repository license for more information.
 
----
 
-Acknowledgements
+#Acknowledgements
 
 Special thanks to the developers and contributors of the open-source projects that make Spaghetti possible.
 
