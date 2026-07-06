@@ -1,7 +1,7 @@
 Spaghetti
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/skulltombstone-hub/Spaghetti/refs/heads/main/app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png" width="128" />
+  <img src="https://raw.githubusercontent.com/skulltombstone-hub/Spaghetti/refs/heads/main/app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png" width="512" />
 </p><p align="center">
   A universal game runtime launcher for Android.
 </p>---
