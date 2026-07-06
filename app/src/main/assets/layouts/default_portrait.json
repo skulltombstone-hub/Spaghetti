@@ -1,168 +1,114 @@
 {
-    "id": "d3c1a23e-bd5f-4a5a-8aac-dcaf0bf34348",
-    "fancyName": "Default Portrait",
-    "orientation": "PORTRAIT",
-    "elements": [
-        {
-            "type": "Key",
-            "id": "b5c9a912-0e36-4f20-a608-aeccc446aa21",
-            "positionX": 0.7515571166732116,
-            "positionY": 0.5080622541718185,
-            "scale": 0.2568120062351227,
-            "opacity": 1.0,
-            "label": null,
-            "trigger": {
-                "type": "Press"
-            },
-            "binding": {
-                "type": "Keyboard",
-                "vk": 67
-            },
-            "sprite": "7c3d1d3f3fb53bc1107a72b41533afb1b44d6aff81b09d1c1eb1a8c62d30e4e4.png"
-        },
-        {
-            "type": "Key",
-            "id": "2c93d2ba-4335-43e8-a859-519f8aec277a",
-            "positionX": 0.625,
-            "positionY": 0.675000011920929,
-            "scale": 0.2599392533302307,
-            "opacity": 1.0,
-            "label": null,
-            "trigger": {
-                "type": "Press"
-            },
-            "binding": {
-                "type": "Keyboard",
-                "vk": 88
-            },
-            "sprite": "defeb0dc81e3aa4347f5ba9e6bced2d477e90a7a7ee90fb50326f146e3d20a92.png"
-        },
-        {
-            "type": "Key",
-            "id": "309bc146-94d2-48b7-b849-6baccf6bb711",
-            "positionX": 0.875,
-            "positionY": 0.675000011920929,
-            "scale": 0.25446656346321106,
-            "opacity": 1.0,
-            "label": null,
-            "trigger": {
-                "type": "Press"
-            },
-            "binding": {
-                "type": "Keyboard",
-                "vk": 90
-            },
-            "sprite": "abccd15f508043217cf1b841f6b28fa7bfee5f1f148d87534a311bc0d8c71323.png"
-        },
-        {
-            "type": "Menu",
-            "id": "9d74012d-4e32-434a-a271-5c868086035e",
-            "positionX": 0.7494365034260682,
-            "positionY": 0.28394910414135666,
-            "scale": 0.10864197462797165,
-            "opacity": 1.0
-        },
-        {
-            "type": "Key",
-            "id": "84df52a5-da56-4572-bcf7-98c2111a882d",
-            "positionX": 0.2771859275744646,
-            "positionY": 0.16954765735408728,
-            "scale": 0.2599392533302307,
-            "opacity": 1.0,
-            "label": null,
-            "trigger": {
-                "type": "Press"
-            },
-            "binding": {
-                "type": "Keyboard",
-                "vk": 38
-            },
-            "sprite": "0646d373e26456973fc8c0277c8012b9a2da501dcda008f87958f5b1ee884baf.png"
-        },
-        {
-            "type": "Key",
-            "id": "3896d0c4-96c6-4528-8a7b-a3071ccefd7f",
-            "positionX": 0.27942725389584666,
-            "positionY": 0.3868318819513661,
-            "scale": 0.251786470413208,
-            "opacity": 1.0,
-            "label": null,
-            "trigger": {
-                "type": "Press"
-            },
-            "binding": {
-                "type": "Keyboard",
-                "vk": 40
-            },
-            "sprite": "ca9f3c2b47eb837a5ed956910a8b06abcde4b71ba870e0daeece2ef6cd0f5999.png"
-        },
-        {
-            "type": "Key",
-            "id": "d8321a62-0898-469d-932e-50d1acb61f3d",
-            "positionX": 0.13717932430336077,
-            "positionY": 0.2774491396576195,
-            "scale": 0.2521211504936218,
-            "opacity": 1.0,
-            "label": null,
-            "trigger": {
-                "type": "Press"
-            },
-            "binding": {
-                "type": "Keyboard",
-                "vk": 37
-            },
-            "sprite": "7094e94ba8bca11a35937f6bc4182f75ac74c816d1419cad6f6739471b015275.png"
-        },
-        {
-            "type": "Key",
-            "id": "48f57ae6-be79-45a9-8cab-eedc65541146",
-            "positionX": 0.42430771156796254,
-            "positionY": 0.27806161434273235,
-            "scale": 0.2599392533302307,
-            "opacity": 1.0,
-            "label": null,
-            "trigger": {
-                "type": "Press"
-            },
-            "binding": {
-                "type": "Keyboard",
-                "vk": 39
-            },
-            "sprite": "be3409ed58d65664e2543786bfaec942d9b89c033775499d572d1bd31a3d4248.png"
-        },
-        {
-            "type": "Key",
-            "id": "916274b4-69d7-49ca-8c84-e3e02c827fce",
-            "positionX": 0.28501067752949893,
-            "positionY": 0.6931468660577593,
-            "scale": 0.25368478894233704,
-            "opacity": 1.0,
-            "label": null,
-            "trigger": {
-                "type": "Press"
-            },
-            "binding": {
-                "type": "Keyboard",
-                "vk": 13
-            },
-            "sprite": "f1614dea9d6a263afe9153a84f765a41afeb46dc1f937a00b4dd74c2333c6751.png"
-        },
-        {
-            "type": "Key",
-            "id": "7284a69f-ac6a-49d0-af5c-c77ca5b9a1ef",
-            "positionX": 0.28623982187127694,
-            "positionY": 0.5507959909919009,
-            "scale": 0.2599914073944092,
-            "opacity": 1.0,
-            "label": null,
-            "trigger": {
-                "type": "Press"
-            },
-            "binding": {
-                "type": "Keyboard",
-                "vk": 32
-            },
-            "sprite": "8ab30369f6a4d8aac5aeb266a8abd2e6eff4958260a37da92d235125764c712a.png"
-        }
-    ]
+  "id": "d3c1a23e-bd5f-4a5a-8aac-dcaf0bf34348",
+  "fancyName": "Default Portrait",
+  "orientation": "PORTRAIT",
+  "elements": [
+    {
+      "type": "Key",
+      "id": "b5c9a912-0e36-4f20-a608-aeccc446aa21",
+      "positionX": 0.7515571166732116,
+      "positionY": 0.5080622541718185,
+      "scale": 0.20,
+      "opacity": 1.0,
+      "label": null,
+      "trigger": { "type": "Press" },
+      "binding": { "type": "Keyboard", "vk": 67 }
+    },
+    {
+      "type": "Key",
+      "id": "2c93d2ba-4335-43e8-a859-519f8aec277a",
+      "positionX": 0.625,
+      "positionY": 0.675000011920929,
+      "scale": 0.21,
+      "opacity": 1.0,
+      "label": null,
+      "trigger": { "type": "Press" },
+      "binding": { "type": "Keyboard", "vk": 88 }
+    },
+    {
+      "type": "Key",
+      "id": "309bc146-94d2-48b7-b849-6baccf6bb711",
+      "positionX": 0.875,
+      "positionY": 0.675000011920929,
+      "scale": 0.20,
+      "opacity": 1.0,
+      "label": null,
+      "trigger": { "type": "Press" },
+      "binding": { "type": "Keyboard", "vk": 90 }
+    },
+    {
+      "type": "Menu",
+      "id": "9d74012d-4e32-434a-a271-5c868086035e",
+      "positionX": 0.7494365034260682,
+      "positionY": 0.28394910414135666,
+      "scale": 0.10864197462797165,
+      "opacity": 1.0
+    },
+    {
+      "type": "Key",
+      "id": "84df52a5-da56-4572-bcf7-98c2111a882d",
+      "positionX": 0.2771859275744646,
+      "positionY": 0.16954765735408728,
+      "scale": 0.21,
+      "opacity": 1.0,
+      "label": null,
+      "trigger": { "type": "Press" },
+      "binding": { "type": "Keyboard", "vk": 38 }
+    },
+    {
+      "type": "Key",
+      "id": "3896d0c4-96c6-4528-8a7b-a3071ccefd7f",
+      "positionX": 0.27942725389584666,
+      "positionY": 0.3868318819513661,
+      "scale": 0.20,
+      "opacity": 1.0,
+      "label": null,
+      "trigger": { "type": "Press" },
+      "binding": { "type": "Keyboard", "vk": 40 }
+    },
+    {
+      "type": "Key",
+      "id": "d8321a62-0898-469d-932e-50d1acb61f3d",
+      "positionX": 0.13717932430336077,
+      "positionY": 0.2774491396576195,
+      "scale": 0.20,
+      "opacity": 1.0,
+      "label": null,
+      "trigger": { "type": "Press" },
+      "binding": { "type": "Keyboard", "vk": 37 }
+    },
+    {
+      "type": "Key",
+      "id": "48f57ae6-be79-45a9-8cab-eedc65541146",
+      "positionX": 0.42430771156796254,
+      "positionY": 0.27806161434273235,
+      "scale": 0.20,
+      "opacity": 1.0,
+      "label": null,
+      "trigger": { "type": "Press" },
+      "binding": { "type": "Keyboard", "vk": 39 }
+    },
+    {
+      "type": "Key",
+      "id": "916274b4-69d7-49ca-8c84-e3e02c827fce",
+      "positionX": 0.28501067752949893,
+      "positionY": 0.6931468660577593,
+      "scale": 0.20,
+      "opacity": 1.0,
+      "label": null,
+      "trigger": { "type": "Press" },
+      "binding": { "type": "Keyboard", "vk": 13 }
+    },
+    {
+      "type": "Key",
+      "id": "7284a69f-ac6a-49d0-af5c-c77ca5b9a1ef",
+      "positionX": 0.28623982187127694,
+      "positionY": 0.5507959909919009,
+      "scale": 0.21,
+      "opacity": 1.0,
+      "label": null,
+      "trigger": { "type": "Press" },
+      "binding": { "type": "Keyboard", "vk": 32 }
+    }
+  ]
 }
