@@ -1,6 +1,6 @@
 {
     "id": "1af33513-7ee5-4fcf-9508-81c7fb5ac891",
-    "fancyName": "D-Pad Landscape",
+    "fancyName": "Joystick Landscape",
     "orientation": "LANDSCAPE",
     "elements": [
         {
@@ -61,70 +61,6 @@
         },
         {
             "type": "Key",
-            "id": "484ce719-c88a-4b2b-8c09-c8493ec9187d",
-            "positionX": 0.09742844125139527,
-            "positionY": 0.583677159716899,
-            "scale": 0.11278770864009857,
-            "opacity": 1.0,
-            "label": null,
-            "trigger": {
-                "type": "Press"
-            },
-            "binding": {
-                "type": "Keyboard",
-                "vk": 38
-            }
-        },
-        {
-            "type": "Key",
-            "id": "152a035a-5aea-4dd5-8e1e-5ef1a7c59c9f",
-            "positionX": 0.05624999850988388,
-            "positionY": 0.6875,
-            "scale": 0.11435212194919586,
-            "opacity": 1.0,
-            "label": null,
-            "trigger": {
-                "type": "Press"
-            },
-            "binding": {
-                "type": "Keyboard",
-                "vk": 37
-            }
-        },
-        {
-            "type": "Key",
-            "id": "faa84200-f5ba-4a9f-b058-bfb9e6d61e84",
-            "positionX": 0.140625,
-            "positionY": 0.6875,
-            "scale": 0.11278770864009857,
-            "opacity": 1.0,
-            "label": null,
-            "trigger": {
-                "type": "Press"
-            },
-            "binding": {
-                "type": "Keyboard",
-                "vk": 39
-            }
-        },
-        {
-            "type": "Key",
-            "id": "9faf7d72-2197-4168-9546-326ce0f9c8e8",
-            "positionX": 0.09810687168646837,
-            "positionY": 0.7909021448576823,
-            "scale": 0.11044105887413025,
-            "opacity": 1.0,
-            "label": null,
-            "trigger": {
-                "type": "Press"
-            },
-            "binding": {
-                "type": "Keyboard",
-                "vk": 40
-            }
-        },
-        {
-            "type": "Key",
             "id": "aaedd9af-83f3-42af-8a95-117d98f23e62",
             "positionX": 0.05624999850988388,
             "positionY": 0.125,
@@ -153,6 +89,30 @@
             "binding": {
                 "type": "Keyboard",
                 "vk": 32
+            }
+        },
+        {
+            "type": "Joystick",
+            "id": "9b21c9bd-cf66-4607-82f8-696379b5aa20",
+            "positionX": 0.11249999701976776,
+            "positionY": 0.6875,
+            "scale": 0.30130061507225037,
+            "opacity": 1.0,
+            "up": {
+                "type": "Keyboard",
+                "vk": 38
+            },
+            "down": {
+                "type": "Keyboard",
+                "vk": 40
+            },
+            "left": {
+                "type": "Keyboard",
+                "vk": 37
+            },
+            "right": {
+                "type": "Keyboard",
+                "vk": 39
             }
         }
     ]

@@ -1,0 +1,119 @@
+{
+    "id": "87e7e33f-9704-490d-8f67-6a3bb6a81730",
+    "fancyName": "Joystick Portrait",
+    "orientation": "PORTRAIT",
+    "elements": [
+        {
+            "type": "Key",
+            "id": "b5c9a912-0e36-4f20-a608-aeccc446aa21",
+            "positionX": 0.75,
+            "positionY": 0.5062500238418579,
+            "scale": 0.2,
+            "opacity": 1.0,
+            "label": null,
+            "trigger": {
+                "type": "Press"
+            },
+            "binding": {
+                "type": "Keyboard",
+                "vk": 67
+            }
+        },
+        {
+            "type": "Key",
+            "id": "2c93d2ba-4335-43e8-a859-519f8aec277a",
+            "positionX": 0.5625,
+            "positionY": 0.675000011920929,
+            "scale": 0.21,
+            "opacity": 1.0,
+            "label": null,
+            "trigger": {
+                "type": "Press"
+            },
+            "binding": {
+                "type": "Keyboard",
+                "vk": 88
+            }
+        },
+        {
+            "type": "Key",
+            "id": "309bc146-94d2-48b7-b849-6baccf6bb711",
+            "positionX": 0.8125,
+            "positionY": 0.731249988079071,
+            "scale": 0.2,
+            "opacity": 1.0,
+            "label": null,
+            "trigger": {
+                "type": "Press"
+            },
+            "binding": {
+                "type": "Keyboard",
+                "vk": 90
+            }
+        },
+        {
+            "type": "Menu",
+            "id": "9d74012d-4e32-434a-a271-5c868086035e",
+            "positionX": 0.75,
+            "positionY": 0.22499999403953552,
+            "scale": 0.10864197462797165,
+            "opacity": 1.0
+        },
+        {
+            "type": "Key",
+            "id": "916274b4-69d7-49ca-8c84-e3e02c827fce",
+            "positionX": 0.25,
+            "positionY": 0.731249988079071,
+            "scale": 0.1458466500043869,
+            "opacity": 1.0,
+            "label": null,
+            "trigger": {
+                "type": "Press"
+            },
+            "binding": {
+                "type": "Keyboard",
+                "vk": 13
+            }
+        },
+        {
+            "type": "Key",
+            "id": "7284a69f-ac6a-49d0-af5c-c77ca5b9a1ef",
+            "positionX": 0.25,
+            "positionY": 0.5625,
+            "scale": 0.14667059481143951,
+            "opacity": 1.0,
+            "label": null,
+            "trigger": {
+                "type": "Press"
+            },
+            "binding": {
+                "type": "Keyboard",
+                "vk": 32
+            }
+        },
+        {
+            "type": "Joystick",
+            "id": "3bc91991-0ad4-4bc8-8bd4-4025dcc77aff",
+            "positionX": 0.25,
+            "positionY": 0.22499999403953552,
+            "scale": 0.3553204834461212,
+            "opacity": 1.0,
+            "up": {
+                "type": "Keyboard",
+                "vk": 38
+            },
+            "down": {
+                "type": "Keyboard",
+                "vk": 40
+            },
+            "left": {
+                "type": "Keyboard",
+                "vk": 37
+            },
+            "right": {
+                "type": "Keyboard",
+                "vk": 39
+            }
+        }
+    ]
+}
