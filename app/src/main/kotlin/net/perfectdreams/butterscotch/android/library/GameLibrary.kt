@@ -112,6 +112,7 @@ class GameLibrary private constructor(
             id = staged.id,
             title = title,
             gameType = gameType,
+            runtimeKind = runtimeKind,
             importedAtMillis = System.currentTimeMillis(),
             favorited = false,
             saveSlots = listOf(
