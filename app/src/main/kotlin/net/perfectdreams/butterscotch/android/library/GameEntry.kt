@@ -14,7 +14,6 @@ data class GameEntry(
     val id: UUID,
     val title: String,
     val gameType: GameType,
-    val runtimeKind: RuntimeKind = RuntimeKind.BUTTERSCOTCH,
     val importedAtMillis: Long,
     val favorited: Boolean,
     val saveSlots: List<SaveSlot>,
