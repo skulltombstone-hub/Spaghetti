@@ -6,4 +6,3 @@ interface GameRuntime {
 
             val capabilities: RuntimeCapabilities
 }
-}
