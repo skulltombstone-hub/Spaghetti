@@ -14,4 +14,3 @@ data class RuntimeCapabilities(
 
                             val supportsSaveSlots: Boolean = true
 )
-)
