@@ -20,8 +20,3 @@ object RuntimeManager {
                                     return runtimes.containsKey(kind)
                         }
 }
-                        }
-                    }
-                }
-            }
-}
