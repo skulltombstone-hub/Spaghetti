@@ -8,5 +8,3 @@ enum class RuntimeKind(
                 HTML("HTML5"),
                     MKXP_Z("RPG Maker")
 }
-}
-)
