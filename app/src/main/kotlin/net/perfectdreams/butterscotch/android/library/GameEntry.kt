@@ -1,5 +1,6 @@
 package net.perfectdreams.butterscotch.android.library
 
+import net.perfectdreams.butterscotch.android.runtime.RuntimeKind
 import androidx.compose.ui.unit.IntSize
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -13,6 +14,7 @@ data class GameEntry(
     val id: UUID,
     val title: String,
     val gameType: GameType,
+    val runtimeKind: RuntimeKind = RuntimeKind.BUTTERSCOTCH,
     val importedAtMillis: Long,
     val favorited: Boolean,
     val saveSlots: List<SaveSlot>,
