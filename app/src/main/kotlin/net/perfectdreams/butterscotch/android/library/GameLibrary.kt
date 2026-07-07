@@ -1,5 +1,6 @@
 package net.perfectdreams.butterscotch.android.library
 
+import net.perfectdreams.butterscotch.android.runtime.RuntimeKind
 import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
@@ -95,6 +96,7 @@ class GameLibrary private constructor(
         staged: StagedGame,
         title: String,
         gameType: GameEntry.GameType,
+        runtimeKind: RuntimeKind = RuntimeKind.BUTTERSCOTCH,
         icon: Bitmap? = null,
         portraitLayout: UUID = LayoutLibrary.DEFAULT_PORTRAIT_LAYOUT,
         landscapeLayout: UUID = LayoutLibrary.DEFAULT_LANDSCAPE_LAYOUT,
@@ -110,6 +112,7 @@ class GameLibrary private constructor(
             id = staged.id,
             title = title,
             gameType = gameType,
+            runtimeKind = runtimeKind,
             importedAtMillis = System.currentTimeMillis(),
             favorited = false,
             saveSlots = listOf(
