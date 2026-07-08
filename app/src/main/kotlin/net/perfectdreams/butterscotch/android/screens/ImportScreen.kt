@@ -62,7 +62,7 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import net.perfectdreams.butterscotch.android.BuildConfig
 import net.perfectdreams.butterscotch.android.ButterscotchUtils
-import net.perfectdreams.butterscotch.android.GameImporter
+import net.perfectdreams.butterscotch.android.importer.GameMakerImporter
 import net.perfectdreams.butterscotch.android.R
 import net.perfectdreams.butterscotch.android.components.ButterscotchBackButton
 import net.perfectdreams.butterscotch.android.components.ButterscotchTopBar
@@ -90,7 +90,7 @@ private sealed interface ImportUIState {
     class Copying : ImportUIState {
         var currentFile by mutableStateOf<String?>(null)
     }
-    data class Configure(val result: GameImporter.Result.Success) : ImportUIState
+    data class Configure(val result: GameMakerImporter.Result.Success) : ImportUIState
     data class Error(val message: String, val previous: ImportUIState = Intro) : ImportUIState
 }
 
@@ -232,12 +232,12 @@ fun ImportScreen(
                                         try {
                                             val zipAsBytes = ButterscotchUtils.http.get("/samples/${game.slug}/${game.version}/game.zip").bodyAsBytes()
                                             val iconAsBytes = ButterscotchUtils.http.get("/samples/${game.slug}/${game.version}/icon.png").bodyAsBytes()
-                                            state = when (val result = GameImporter.importZip(library, zipAsBytes, game.name, iconAsBytes) { copyingState.currentFile = it }) {
-                                                is GameImporter.Result.Success -> ImportUIState.Configure(result)
-                                                is GameImporter.Result.MissingWad -> ImportUIState.Error(
-                                                    "Missing WAD in ZIP!\n\nExpected one of: ${GameImporter.WAD_FILENAMES.joinToString(", ")}"
+                                            state = when (val result = GameMakerImporter.import(context, uri, library) { copyingState.currentFile = it }) {
+                                                is GameMakerImporter.Result.Success -> ImportUIState.Configure(result)
+                                                is GameMakerImporter.Result.MissingWad -> ImportUIState.Error(
+                                                    "Missing WAD in folder!\n\nExpected one of: ${GameMakerImporter.WAD_FILENAMES.joinToString(", ")}"
                                                 )
-                                                is GameImporter.Result.Failure -> ImportUIState.Error(result.message)
+                                                is GameMakerImporter.Result.Failure -> ImportUIState.Error(result.message)
                                             }
                                         } catch (e: Exception) {
                                             Toast.makeText(context, "Failed to connect to server!", Toast.LENGTH_SHORT).show()
