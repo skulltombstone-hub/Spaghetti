@@ -2,22 +2,19 @@ package net.perfectdreams.butterscotch.android.importer
 
 import android.content.Context
 import android.net.Uri
-import android.graphics.BitmapFactory
 import android.util.Log
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import net.perfectdreams.butterscotch.android.GameImporter
 import net.perfectdreams.butterscotch.android.ParsedDataWin
 import net.perfectdreams.butterscotch.android.library.GameLibrary
 import net.perfectdreams.butterscotch.android.pe.IconCandidate
 import net.perfectdreams.butterscotch.android.pe.scanIconCandidates
 import java.io.File
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-
 
 object GameMakerImporter {
 
     private const val TAG = "GameMakerImporter"
-
 
     val WAD_FILENAMES = listOf(
         "data.win",
@@ -29,7 +26,6 @@ object GameMakerImporter {
         "game.osx"
     )
 
-
     sealed interface Result {
 
         data class Success(
@@ -38,19 +34,19 @@ object GameMakerImporter {
             val title: String,
             val wadVersion: Int,
             val iconCandidates: List<IconCandidate>
-        ) : Result
-
+        ) : Result {
+            val suggestedTitle: String
+                get() = title
+        }
 
         data class MissingWad(
             val folderName: String
         ) : Result
 
-
         data class Failure(
             val message: String
         ) : Result
     }
-
 
     suspend fun import(
         context: Context,
@@ -58,8 +54,6 @@ object GameMakerImporter {
         library: GameLibrary,
         writeFileCallback: (String) -> Unit
     ): Result = withContext(Dispatchers.IO) {
-
-
         val staged =
             GameImporter.importFolder(
                 context,
@@ -67,48 +61,70 @@ object GameMakerImporter {
                 library,
                 writeFileCallback
             )
-            ?: return@withContext Result.Failure(
-                "Unable to import folder"
+                ?: return@withContext Result.Failure(
+                    "Unable to import folder"
+                )
+
+        importStaged(
+            library = library,
+            staged = staged
+        )
+    }
+
+    suspend fun importZip(
+        context: Context,
+        uri: Uri,
+        library: GameLibrary,
+        writeFileCallback: (String) -> Unit
+    ): Result = withContext(Dispatchers.IO) {
+        val staged =
+            GameImporter.importZip(
+                context,
+                uri,
+                library,
+                writeFileCallback
             )
+                ?: return@withContext Result.Failure(
+                    "Unable to import ZIP"
+                )
 
+        importStaged(
+            library = library,
+            staged = staged
+        )
+    }
 
+    private fun importStaged(
+        library: GameLibrary,
+        staged: GameLibrary.StagedGame
+    ): Result {
         val wad =
             WAD_FILENAMES.firstOrNull {
                 File(staged.bundleDir, it).exists()
             }
 
-
         if (wad == null) {
-
             library.discardStaging(staged)
-
-            return@withContext Result.MissingWad(
-                staged.id
+            return Result.MissingWad(
+                staged.id.toString()
             )
         }
 
-
-        finalize(
-            library,
-            staged,
-            wad
+        return finalize(
+            staged = staged,
+            wadFilename = wad
         )
     }
 
-
     private fun finalize(
-        library: GameLibrary,
         staged: GameLibrary.StagedGame,
         wadFilename: String
     ): Result {
-
-
         val wad =
             File(
                 staged.bundleDir,
                 wadFilename
             )
-
 
         val metadata =
             ParsedDataWin
@@ -117,22 +133,19 @@ object GameMakerImporter {
                     it.displayName to it.wadVersion
                 }
 
-
         val icons =
             runCatching {
                 scanIconCandidates(
                     staged.bundleDir
                 )
-            }
-            .getOrDefault(emptyList())
-
+            }.getOrDefault(emptyList())
 
         return Result.Success(
-            staged,
-            wadFilename,
-            metadata?.first ?: staged.id,
-            metadata?.second ?: -1,
-            icons
+            staged = staged,
+            wadFilename = wadFilename,
+            title = metadata?.first ?: staged.id.toString(),
+            wadVersion = metadata?.second ?: -1,
+            iconCandidates = icons
         )
     }
 }
