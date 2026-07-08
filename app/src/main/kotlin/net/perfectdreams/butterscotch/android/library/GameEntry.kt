@@ -1,6 +1,5 @@
 package net.perfectdreams.butterscotch.android.library
 
-import net.perfectdreams.butterscotch.android.runtime.RuntimeKind
 import androidx.compose.ui.unit.IntSize
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
