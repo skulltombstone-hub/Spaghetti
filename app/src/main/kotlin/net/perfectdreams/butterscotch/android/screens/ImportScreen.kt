@@ -113,7 +113,7 @@ fun ImportScreen(
         val copyingState = ImportUIState.Copying()
         state = copyingState
         scope.launch {
-            state = when (val result = GameImporter.import(context, uri, library) { copyingState.currentFile = it }) {
+            state = when (val result = GameMakerImporter.import(context, uri, library) { copyingState.currentFile = it }) {
                 is GameImporter.Result.Success -> ImportUIState.Configure(result)
                 is GameImporter.Result.MissingWad -> ImportUIState.Error(
                     "Missing WAD in folder!\n\nExpected one of: ${GameImporter.WAD_FILENAMES.joinToString(", ")}"
@@ -131,7 +131,7 @@ fun ImportScreen(
         val copyingState = ImportUIState.Copying()
         state = copyingState
         scope.launch {
-            state = when (val result = GameImporter.importZip(context, uri, library) { copyingState.currentFile = it }) {
+            state = when (val result = GameMakerImporter.importZip(context, uri, library) { copyingState.currentFile = it }) {
                 is GameImporter.Result.Success -> ImportUIState.Configure(result)
                 is GameImporter.Result.MissingWad -> ImportUIState.Error(
                     "Missing WAD in ZIP!\n\nExpected one of: ${GameImporter.WAD_FILENAMES.joinToString(", ")}"
@@ -281,7 +281,7 @@ private fun IntroPane(onSelectFolder: () -> Unit, onSelectZip: () -> Unit, onSel
         )
         Spacer(Modifier.height(24.dp))
         Text(
-            "Select a folder or a ZIP with a GameMaker WAD file (${GameImporter.WAD_FILENAMES.joinToString(", ")})",
+            "Select a folder or a ZIP with a GameMaker WAD file (${GameMakerImporter.WAD_FILENAMES.joinToString(", ")})",
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
         )
@@ -318,7 +318,7 @@ private fun CopyingPane(currentFile: String?) {
 
 @Composable
 private fun ConfigurePane(
-    result: GameImporter.Result.Success,
+    result: GameMakerImporter.Result.Success,
     layoutLibrary: LayoutLibrary,
     onSave: (title: String, icon: Bitmap?, portraitLayout: UUID, landscapeLayout: UUID, runnerOs: GameEntry.RunnerOs, enablePhysicalControllers: Boolean, enablePhysicalKeyboard: Boolean, enableWidescreenHack: Boolean, postProcessing: GameEntry.PostProcessingSettings) -> Unit
 ) {
