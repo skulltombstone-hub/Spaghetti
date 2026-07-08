@@ -63,14 +63,36 @@ data class GameEntry(
 
     @Serializable
     sealed class GameType {
-        @Serializable
-        @SerialName("GameMakerStudio")
-        class GameMakerStudio(
-            val wadVersion: Int,
-            val filename: String
-        ) : GameType()
+      @Serializable
+      @SerialName("GameMakerStudio")
+      data class GameMakerStudio(
+        val wadVersion: Int,
+        val filename: String
+      ) : GameType()
 
-        // We keep it like this for when we decide to add new GameMaker versions :3
+      @Serializable
+      @SerialName("Flash")
+      data class Flash(
+        val swfFileName: String
+      ) : GameType()
+
+      @Serializable
+      @SerialName("RPGM")
+      data class RpgMakerXp(
+        val entryPoint: String = "Game.exe"
+      ) : GameType()
+
+      @Serializable
+      @SerialName("OldRPGM")
+      data class EasyRpg(
+        val gameFolderName: String = "Game"
+      ) : GameType()
+
+      @Serializable
+      @SerialName("HTML")
+      data class Html(
+        val entryFileName: String = "index.html"
+      ) : GameType()
     }
 
     @Serializable
