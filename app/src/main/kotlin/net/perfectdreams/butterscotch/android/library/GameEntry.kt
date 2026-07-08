@@ -67,7 +67,7 @@ data class GameEntry(
       @SerialName("GameMakerStudio")
       data class GameMakerStudio(
         val wadVersion: Int,
-        val filename: String
+        val wadFileName: String
       ) : GameType()
 
       @Serializable
@@ -78,15 +78,11 @@ data class GameEntry(
 
       @Serializable
       @SerialName("RPGM")
-      data class RpgMakerXp(
-        val entryPoint: String = "Game.exe"
-      ) : GameType()
+      data object RPGMaker : GameType()
 
       @Serializable
       @SerialName("OldRPGM")
-      data class EasyRpg(
-        val gameFolderName: String = "Game"
-      ) : GameType()
+      data object OldRPGM : GameType()
 
       @Serializable
       @SerialName("HTML")
