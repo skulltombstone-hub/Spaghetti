@@ -322,9 +322,17 @@ private fun GameTile(
                     Text(entry.title, style = MaterialTheme.typography.titleMedium.copy(lineHeight = 20.sp))
                     Text(
                         when (entry.gameType) {
-                            is GameEntry.GameType.GameMakerStudio -> "GM:S (WAD Version ${entry.gameType.wadVersion})"
-                        },
-                        style = MaterialTheme.typography.bodySmall
+                            is GameEntry.GameType.GameMakerStudio ->
+                                "GM:S (WAD Version ${entry.gameType.wadVersion})"
+                            is GameEntry.GameType.Flash ->
+                                "Adobe Flash"
+                            is GameEntry.GameType.RPGMaker ->
+                                "RPG Maker XP / VX / VX Ace"
+                            is GameEntry.GameType.OldRPGM ->
+                                "RPG Maker 2000 / 2003"
+                            is GameEntry.GameType.Html ->
+                                "HTML5"
+                        }
                     )
                 }
             }
