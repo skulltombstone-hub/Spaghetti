@@ -22,57 +22,37 @@ object PlusManager {
         MULTI_DEVICE_SYNC
     }
 
-    private val _features =
-    MutableStateFlow<Set<Feature>>(emptySet())
-    
-    val features: StateFlow<Set<Feature>> =
-    _features.asStateFlow()
-    
-    private val _status = MutableStateFlow(Status.UNKNOWN)
-    val status: StateFlow<Status> = _status.asStateFlow()
+    data class PlusState(
+        val status: Status = Status.UNKNOWN,
+        val features: Set<Feature> = emptySet(),
+        val isLoading: Boolean = true
+    ) {
+        val isPlus: Boolean
+            get() = status == Status.PLUS
 
-    private val _isLoading = MutableStateFlow(true)
-    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+        fun hasFeature(feature: Feature): Boolean {
+            return feature in features
+        }
+    }
 
-    private val _features = mutableSetOf<Feature>()
+    private val _state = MutableStateFlow(PlusState())
+
+    val state: StateFlow<PlusState> =
+        _state.asStateFlow()
+
+    val currentState: PlusState
+        get() = _state.value
 
     val isPlus: Boolean
-        get() = _status.value == Status.PLUS
+        get() = currentState.isPlus
 
     fun hasFeature(feature: Feature): Boolean {
-        return feature in _features
+        return currentState.hasFeature(feature)
     }
 
-    fun setFree() {
-        _status.value = Status.FREE
-        _features.clear()
-        _isLoading.value = false
-    }
-
-    fun setPlus() {
-        _status.value = Status.PLUS
-
-        _features.clear()
-        _features.addAll(Feature.entries)
-
-        _isLoading.value = false
-    }
-
-    fun setLoading() {
-        _status.value = Status.UNKNOWN
-        _features.clear()
-        _isLoading.value = true
-    }
-
-    fun grantFeature(feature: Feature) {
-        _features.add(feature)
-    }
-
-    fun revokeFeature(feature: Feature) {
-        _features.remove(feature)
-    }
-
-    fun clearFeatures() {
-        _features.clear()
+    internal fun update(
+        state: PlusState
+    ) {
+        _state.value = state
     }
 }
