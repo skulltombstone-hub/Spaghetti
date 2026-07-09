@@ -183,36 +183,6 @@ fun LauncherScreen(
                         )
 
                         DropdownMenuItem(
-                            leadingIcon = { Icon(painterResource(R.drawable.discord), contentDescription = null, modifier = Modifier.size(24.dp)) },
-                            text = { Text("Discord Community") },
-                            onClick = {
-                                menuExpanded = false
-                                val intent = Intent(Intent.ACTION_VIEW, "https://discord.gg/2gQR7t3WJR".toUri())
-                                context.startActivity(intent)
-                            },
-                        )
-
-                        DropdownMenuItem(
-                            leadingIcon = { Icon(Icons.Filled.Star, contentDescription = null, modifier = Modifier.size(24.dp)) },
-                            text = { Text("Loritta") },
-                            onClick = {
-                                menuExpanded = false
-                                val intent = Intent(Intent.ACTION_VIEW, "https://loritta.website/".toUri())
-                                context.startActivity(intent)
-                            },
-                        )
-
-                        DropdownMenuItem(
-                            leadingIcon = { Icon(painterResource(R.drawable.pickaxe), contentDescription = null, modifier = Modifier.size(24.dp)) },
-                            text = { Text("SparklyPower") },
-                            onClick = {
-                                menuExpanded = false
-                                val intent = Intent(Intent.ACTION_VIEW, "https://sparklypower.net/".toUri())
-                                context.startActivity(intent)
-                            },
-                        )
-
-                        DropdownMenuItem(
                             leadingIcon = { Icon(Icons.Filled.Info, contentDescription = null) },
                             text = { Text("About") },
                             onClick = {
