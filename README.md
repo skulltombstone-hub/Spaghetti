@@ -136,10 +136,6 @@ You can help by:
 
 Before contributing, please check the project structure and existing issues.
 
-## License
-
-See the repository license for more information.
-
 ## Acknowledgements
 
 Special thanks to the developers and contributors of the open-source projects that make Spaghetti possible.
