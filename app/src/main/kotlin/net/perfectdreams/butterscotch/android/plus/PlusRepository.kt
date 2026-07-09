@@ -6,6 +6,7 @@ import kotlinx.coroutines.sync.withLock
 class PlusRepository(
     private val plusManager: PlusManager = PlusManager
 ) {
+
     private val mutex = Mutex()
 
     /**
@@ -15,31 +16,51 @@ class PlusRepository(
      * - consultar o Google Play Billing;
      * - restaurar compras;
      * - validar cache local;
-     * - sincronizar com um servidor (se existir).
+     * - sincronizar com um servidor.
      */
     suspend fun refresh() = mutex.withLock {
-        plusManager.setLoading()
 
-        // TODO: Consultar BillingManager
-        // TODO: Consultar cache
-        // TODO: Validar assinatura
+        plusManager.update(
+            PlusManager.PlusState(
+                status = PlusManager.Status.UNKNOWN,
+                isLoading = true
+            )
+        )
 
-        plusManager.setFree()
+        // TODO: BillingManager
+        // TODO: Cache
+        // TODO: Validação
+
+        plusManager.update(
+            PlusManager.PlusState(
+                status = PlusManager.Status.FREE
+            )
+        )
     }
 
     /**
-     * Chamado quando uma compra é reconhecida.
+     * Ativa todos os recursos Plus.
      */
     suspend fun activatePlus() = mutex.withLock {
-        plusManager.setPlus()
+
+        plusManager.update(
+            PlusManager.PlusState(
+                status = PlusManager.Status.PLUS,
+                features = PlusManager.Feature.entries.toSet()
+            )
+        )
     }
 
     /**
-     * Chamado quando a assinatura expira,
-     * é cancelada ou a validação falha.
+     * Remove a assinatura.
      */
     suspend fun deactivatePlus() = mutex.withLock {
-        plusManager.setFree()
+
+        plusManager.update(
+            PlusManager.PlusState(
+                status = PlusManager.Status.FREE
+            )
+        )
     }
 
     /**
@@ -50,19 +71,26 @@ class PlusRepository(
     }
 
     /**
-     * Força uma atualização da assinatura.
+     * Força sincronização.
      */
-    suspend fun sync() = mutex.withLock {
+    suspend fun sync() {
         refresh()
     }
 
     /**
-     * Libera apenas um recurso específico.
+     * Libera um recurso específico.
      */
     suspend fun grantFeature(
         feature: PlusManager.Feature
     ) = mutex.withLock {
-        plusManager.grantFeature(feature)
+
+        val state = plusManager.currentState
+
+        plusManager.update(
+            state.copy(
+                features = state.features + feature
+            )
+        )
     }
 
     /**
@@ -71,20 +99,41 @@ class PlusRepository(
     suspend fun revokeFeature(
         feature: PlusManager.Feature
     ) = mutex.withLock {
-        plusManager.revokeFeature(feature)
+
+        val state = plusManager.currentState
+
+        plusManager.update(
+            state.copy(
+                features = state.features - feature
+            )
+        )
     }
 
     /**
-     * Usado apenas durante desenvolvimento.
+     * Limpa todos os recursos.
      */
-    suspend fun enableDebugPlus() = mutex.withLock {
-        plusManager.setPlus()
+    suspend fun clearFeatures() = mutex.withLock {
+
+        val state = plusManager.currentState
+
+        plusManager.update(
+            state.copy(
+                features = emptySet()
+            )
+        )
     }
 
     /**
-     * Usado apenas durante desenvolvimento.
+     * Ativa o Plus apenas para testes.
      */
-    suspend fun disableDebugPlus() = mutex.withLock {
-        plusManager.setFree()
+    suspend fun enableDebugPlus() {
+        activatePlus()
+    }
+
+    /**
+     * Desativa o Plus apenas para testes.
+     */
+    suspend fun disableDebugPlus() {
+        deactivatePlus()
     }
 }
