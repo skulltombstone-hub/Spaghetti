@@ -317,31 +317,6 @@ private fun IntroPane(
     ) {
 
 
-        FrameAnimationImage(
-
-            frames =
-                listOf(
-                    R.drawable.import_1,
-                    R.drawable.import_2
-                ),
-
-            frameDurationMs = 500,
-
-            contentDescription = null,
-
-            originalImageWidth = 32,
-
-            originalImageHeight = 22,
-
-            scaleUpBy = 4
-        )
-
-
-        Spacer(
-            Modifier.height(24.dp)
-        )
-
-
         Text(
 
             "Select a folder or a ZIP with a GameMaker WAD file (${GameMakerImporter.WAD_FILENAMES.joinToString(", ")})",
