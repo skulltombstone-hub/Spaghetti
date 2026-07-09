@@ -22,6 +22,12 @@ object PlusManager {
         MULTI_DEVICE_SYNC
     }
 
+    private val _features =
+    MutableStateFlow<Set<Feature>>(emptySet())
+    
+    val features: StateFlow<Set<Feature>> =
+    _features.asStateFlow()
+    
     private val _status = MutableStateFlow(Status.UNKNOWN)
     val status: StateFlow<Status> = _status.asStateFlow()
 
