@@ -56,10 +56,12 @@ class GameLibrary private constructor(
 
     fun wadPath(entry: GameEntry): File = File(
         bundleDir(entry),
-        when (entry.gameType) {
-            is GameEntry.GameType.GameMakerStudio -> entry.gameType.filename
+        when (val gameType = entry.gameType) {
+            is GameEntry.GameType.GameMakerStudio -> gameType.filename
+            is GameEntry.GameType.Html -> gameType.entryPoint
         }
     )
+
     fun gameDir(id: UUID): File = File(rootDir, "games/data/$id")
 
     /** Per-game derived assets (icon, future thumbnails). Separate from `data/` so we can rebuild them. */
