@@ -33,7 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import kotlinx.coroutines.launch
 import net.perfectdreams.butterscotch.android.R
-import net.perfectdreams.butterscotch.android.importer.GameMakerImporter
+import net.perfectdreams.butterscotch.android.GameImporter
 import net.perfectdreams.butterscotch.android.components.ButterscotchBackButton
 import net.perfectdreams.butterscotch.android.components.ButterscotchTopBar
 import net.perfectdreams.butterscotch.android.components.FrameAnimationImage
@@ -54,7 +54,7 @@ private sealed interface ImportUIState {
     }
 
     data class Configure(
-        val result: GameMakerImporter.Result.Success
+        val result: GameImporter.Result.Success
     ) : ImportUIState
 
     data class Error(
@@ -94,7 +94,7 @@ fun ImportScreen(
 
                 state = when (
                     val result =
-                        GameMakerImporter.import(
+                        GameImporter.import(
                             context,
                             uri,
                             library
@@ -103,15 +103,15 @@ fun ImportScreen(
                         }
                 ) {
 
-                    is GameMakerImporter.Result.Success ->
+                    is GameImporter.Result.Success ->
                         ImportUIState.Configure(result)
 
-                    is GameMakerImporter.Result.MissingWad ->
+                    is GameImporter.Result.MissingWad ->
                         ImportUIState.Error(
-                            "Missing WAD in folder!\n\nExpected one of: ${GameMakerImporter.WAD_FILENAMES.joinToString(", ")}"
+                            "Missing WAD in folder!\n\nExpected one of: ${GameImporter.WAD_FILENAMES.joinToString(", ")}"
                         )
 
-                    is GameMakerImporter.Result.Failure ->
+                    is GameImporter.Result.Failure ->
                         ImportUIState.Error(result.message)
                 }
             }
@@ -133,7 +133,7 @@ fun ImportScreen(
 
                 state = when (
                     val result =
-                        GameMakerImporter.importZip(
+                        GameImporter.importZip(
                             context,
                             uri,
                             library
@@ -142,20 +142,20 @@ fun ImportScreen(
                         }
                 ) {
 
-                    is GameMakerImporter.Result.Success ->
+                    is GameImporter.Result.Success ->
                         ImportUIState.Configure(result)
 
-                    is GameMakerImporter.Result.MissingWad ->
+                    is GameImporter.Result.MissingWad ->
                         ImportUIState.Error(
-                            "Missing WAD in ZIP!\n\nExpected one of: ${GameMakerImporter.WAD_FILENAMES.joinToString(", ")}"
+                            "Missing WAD in ZIP!\n\nExpected one of: ${GameImporter.WAD_FILENAMES.joinToString(", ")}"
                         )
 
-                    is GameMakerImporter.Result.Failure ->
+                    is GameImporter.Result.Failure ->
                         ImportUIState.Error(result.message)
                 }
             }
         }
-        
+
     Scaffold(
         topBar = {
             ButterscotchTopBar(
@@ -319,7 +319,7 @@ private fun IntroPane(
 
         Text(
 
-            "Select a folder or a ZIP with a GameMaker WAD file (${GameMakerImporter.WAD_FILENAMES.joinToString(", ")})",
+            "Select a folder or a ZIP with a GameMaker WAD file (${GameImporter.WAD_FILENAMES.joinToString(", ")})",
 
             style =
                 MaterialTheme.typography.bodyLarge,
@@ -405,7 +405,7 @@ private fun CopyingPane(
 
 @Composable
 private fun ConfigurePane(
-    result: GameMakerImporter.Result.Success,
+    result: GameImporter.Result.Success,
     layoutLibrary: LayoutLibrary,
 
     onSave: (
