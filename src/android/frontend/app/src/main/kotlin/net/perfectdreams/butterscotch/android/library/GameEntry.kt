@@ -69,6 +69,20 @@ data class GameEntry(
             val filename: String
         ) : GameType()
 
+        /**
+         * HTML/WebView-based game.
+         *
+         * [sourceUrl] is optional for hosted content support later.
+         * [entryPoint] is the local bundle entry file used when the game is imported from a folder
+         * or ZIP and served from the app's private storage.
+         */
+        @Serializable
+        @SerialName("Html")
+        class Html(
+            val sourceUrl: String? = null,
+            val entryPoint: String = "index.html"
+        ) : GameType()
+
         // We keep it like this for when we decide to add new GameMaker versions :3
     }
 
