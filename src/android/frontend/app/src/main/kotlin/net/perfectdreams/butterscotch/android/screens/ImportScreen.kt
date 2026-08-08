@@ -32,8 +32,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import kotlinx.coroutines.launch
-import net.perfectdreams.butterscotch.android.R
 import net.perfectdreams.butterscotch.android.GameImporter
+import net.perfectdreams.butterscotch.android.R
 import net.perfectdreams.butterscotch.android.components.ButterscotchBackButton
 import net.perfectdreams.butterscotch.android.components.ButterscotchTopBar
 import net.perfectdreams.butterscotch.android.components.FrameAnimationImage
@@ -41,7 +41,6 @@ import net.perfectdreams.butterscotch.android.components.MetadataForm
 import net.perfectdreams.butterscotch.android.components.rememberGameMetadataFormState
 import net.perfectdreams.butterscotch.android.layouts.LayoutLibrary
 import net.perfectdreams.butterscotch.android.library.GameEntry
-import net.perfectdreams.butterscotch.android.library.GameEntry.GameType.GameMakerStudio
 import net.perfectdreams.butterscotch.android.library.GameLibrary
 import java.util.UUID
 
@@ -108,7 +107,9 @@ fun ImportScreen(
 
                     is GameImporter.Result.MissingWad ->
                         ImportUIState.Error(
-                            "Missing WAD in folder!\n\nExpected one of: ${GameImporter.WAD_FILENAMES.joinToString(", ")}"
+                            "Missing supported WAD or HTML entry point!\n\n" +
+                                "For GameMaker, expected one of: ${GameImporter.WAD_FILENAMES.joinToString(", ")}\n" +
+                                "For HTML, expected an index.html or index.htm file somewhere in the imported folder."
                         )
 
                     is GameImporter.Result.Failure ->
@@ -147,7 +148,9 @@ fun ImportScreen(
 
                     is GameImporter.Result.MissingWad ->
                         ImportUIState.Error(
-                            "Missing WAD in ZIP!\n\nExpected one of: ${GameImporter.WAD_FILENAMES.joinToString(", ")}"
+                            "Missing supported WAD or HTML entry point!\n\n" +
+                                "For GameMaker, expected one of: ${GameImporter.WAD_FILENAMES.joinToString(", ")}\n" +
+                                "For HTML, expected an index.html or index.htm file somewhere in the ZIP."
                         )
 
                     is GameImporter.Result.Failure ->
@@ -245,10 +248,7 @@ fun ImportScreen(
 
                                 title,
 
-                                GameMakerStudio(
-                                    s.result.wadVersion,
-                                    s.result.wadFilename
-                                ),
+                                s.result.gameType,
 
                                 icon = icon,
 
@@ -319,7 +319,7 @@ private fun IntroPane(
 
         Text(
 
-            "Select a folder or a ZIP with a GameMaker WAD file (${GameImporter.WAD_FILENAMES.joinToString(", ")})",
+            "Select a folder or a ZIP with a supported GameMaker WAD or HTML entry point.",
 
             style =
                 MaterialTheme.typography.bodyLarge,
