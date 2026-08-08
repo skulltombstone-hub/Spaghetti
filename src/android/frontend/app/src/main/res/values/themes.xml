@@ -2,8 +2,8 @@
 <resources>
 
     <style name="Theme.ButterscotchAndroid" parent="android:Theme.Material.NoActionBar">
-        <!-- Pinned dark so the Activity window matches the Compose dark theme. Prevents the white flash on cold start AND between NavHost destination transitions. -->
-        <item name="android:windowBackground">@android:color/black</item>
+        <!-- Use Spaghetti background so cold starts / transitions match Compose dark theme -->
+        <item name="android:windowBackground">@color/background</item>
     </style>
 
     <style name="Theme.ButterscotchAndroid.Splash" parent="Theme.SplashScreen">
