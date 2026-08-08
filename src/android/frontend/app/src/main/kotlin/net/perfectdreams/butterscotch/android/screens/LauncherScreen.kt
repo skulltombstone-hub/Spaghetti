@@ -390,6 +390,8 @@ private fun GameTile(
                         when (val gameType = entry.gameType) {
                             is GameEntry.GameType.GameMakerStudio ->
                                 "GM:S (WAD Version ${gameType.wadVersion})"
+                            is GameEntry.GameType.Html ->
+                                "HTML"
                         }
                     )
                 }
