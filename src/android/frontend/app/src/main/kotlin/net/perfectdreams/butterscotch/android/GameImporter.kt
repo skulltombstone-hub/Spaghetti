@@ -8,6 +8,7 @@ import android.util.Log
 import androidx.documentfile.provider.DocumentFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import net.perfectdreams.butterscotch.android.library.GameEntry
 import net.perfectdreams.butterscotch.android.library.GameLibrary
 import net.perfectdreams.butterscotch.android.pe.IconCandidate
 import net.perfectdreams.butterscotch.android.pe.scanIconCandidates
@@ -17,16 +18,19 @@ import kotlin.math.max
 
 /**
  * Copies a user-picked folder (via Storage Access Framework tree Uri) into the app's per-game
- * bundle directory and detects which GameMaker WAD filename it contains.
+ * bundle directory and detects which supported game type it contains.
+ *
+ * Supported inputs:
+ * - GameMaker WAD-based games
+ * - HTML-based games / sites
  *
  * Why copy and not just hold the tree Uri? `takePersistableUriPermission` is fragile (cleared on
  * reboot in some OEM ROMs, lost if the source folder moves) and `DocumentFile` access is slow.
- * Copying once at import time lets the runner read files via plain POSIX paths forever after.
+ * Copying once at import time lets the runtime read files via plain POSIX paths forever after.
  *
- * Validation policy: the only header check is "does a known WAD filename exist in the picked
- * folder?". The actual parse via [ParsedDataWin.parseLight] runs on the copied file *after*
- * staging — and may crash the process if the file isn't a real WAD (see
- * `datawin-parse-fatal-on-error` project memory). We accept that for now.
+ * Validation policy:
+ * - GameMaker imports require a known WAD filename
+ * - HTML imports require an `index.html` / `index.htm` entry point somewhere in the imported tree
  */
 object GameImporter {
     private const val TAG = "GameImporter"
@@ -42,36 +46,45 @@ object GameImporter {
         "game.osx",   // macOS
     )
 
+    private val HTML_ENTRY_FILENAMES = listOf(
+        "index.html",
+        "index.htm",
+    )
+
     sealed interface Result {
         /**
-         * Folder was successfully copied into [stagedDir]. The detected WAD filename is
-         * [wadFilename]. [suggestedTitle] is the GEN8 displayName/name if non-empty, else null
-         * (caller falls back to folder name). [wadVersion] is the raw GEN8 wadVersion byte; the
-         * configure screen displays it.
+         * The import was successful.
          *
-         * IMPORTANT: the caller must either call [net.perfectdreams.butterscotch.android.library.GameLibrary.commit] with the staged game (passed
-         * back via [staged]) or [net.perfectdreams.butterscotch.android.library.GameLibrary.discardStaging] — leaving it unhandled leaks the
-         * copied bundle on disk.
+         * [gameType] tells the caller whether this is GameMaker or HTML.
+         * [wadFilename]/[wadVersion] are only set for GameMaker imports.
+         * [entryPoint] is only set for HTML imports and is relative to the imported bundle root.
+         *
+         * IMPORTANT: the caller must either call
+         * [net.perfectdreams.butterscotch.android.library.GameLibrary.commit] with the staged game
+         * (passed back via [staged]) or
+         * [net.perfectdreams.butterscotch.android.library.GameLibrary.discardStaging].
          */
         data class Success(
             val staged: GameLibrary.StagedGame,
-            val wadFilename: String,
+            val gameType: GameEntry.GameType,
             val suggestedTitle: String,
-            val wadVersion: Int,
             val folderName: String,
             val iconCandidates: List<IconCandidate>,
+            val wadFilename: String? = null,
+            val wadVersion: Int? = null,
+            val entryPoint: String? = null,
         ) : Result
 
-        /** The picked folder had none of [WAD_FILENAMES] at its top level. */
+        /** The picked folder/archive did not contain a supported game entry point. */
         data class MissingWad(val folderName: String) : Result
 
-        /** Tree Uri was unreadable, or copy failed midway. Staged dir (if any) is deleted. */
+        /** Tree Uri was unreadable, or copy/extract failed midway. Staged dir (if any) is deleted. */
         data class Failure(val message: String) : Result
     }
 
     /**
-     * Pick a folder → copy its contents into a fresh staging dir → peek the WAD metadata. Runs on
-     * IO dispatcher.
+     * Pick a folder → copy its contents into a fresh staging dir → detect supported format.
+     * Runs on IO dispatcher.
      */
     suspend fun import(
         context: Context,
@@ -85,12 +98,6 @@ object GameImporter {
         }
 
         val folderName = root.name ?: "Imported Game"
-
-        val wadDoc = root.listFiles().firstOrNull { doc ->
-            doc.isFile && doc.name in WAD_FILENAMES
-        } ?: return@withContext Result.MissingWad(folderName)
-
-        val wadFilename = wadDoc.name!!
         val staged = library.beginStaging()
 
         try {
@@ -101,17 +108,19 @@ object GameImporter {
             return@withContext Result.Failure("Couldn't copy folder: ${e.message}")
         }
 
-        finalize(library, staged, wadFilename, folderName, null, emptyList())
+        finalizeFromBundle(
+            library = library,
+            staged = staged,
+            bundleRoot = staged.bundleDir,
+            folderName = folderName
+        )
     }
 
     /**
-     * Pick a ZIP → extract it into a fresh staging dir → peek the WAD metadata. Runs on IO
-     * dispatcher.
+     * Pick a ZIP → extract it into a fresh staging dir → detect supported format.
      *
-     * Unlike folder import, the WAD may live anywhere inside the archive (e.g. the user zipped the
-     * whole game folder, producing `MyGame/data.win`). We extract everything to a temp dir, find the
-     * first known WAD filename recursively, and promote the directory that holds it to be the bundle
-     * root — so the WAD's sibling assets (icons, audio, the original .exe) come along.
+     * For ZIPs, the supported root is promoted so that the WAD or HTML entry point becomes
+     * available at the bundle root, together with its sibling assets.
      */
     suspend fun importZip(
         context: Context,
@@ -123,8 +132,6 @@ object GameImporter {
         val fallbackName = (displayName?.removeSuffix(".zip") ?: "").ifBlank { "Imported Game" }
         val staged = library.beginStaging()
 
-        // Extract into a sibling temp dir first so we can locate the WAD wherever it is, then move
-        // its containing directory into the bundle.
         val temp = File(staged.bundleDir.parentFile, "extract-tmp")
         if (temp.exists()) temp.deleteRecursively()
         temp.mkdirs()
@@ -138,28 +145,44 @@ object GameImporter {
             return@withContext Result.Failure("Couldn't extract ZIP: ${e.message}")
         }
 
-        // Prefer the shallowest WAD, so a root data.win beats one nested inside a subfolder
-        val wadFile = temp.walkTopDown().filter { it.isFile && it.name in WAD_FILENAMES }.minByOrNull { it.relativeTo(temp).invariantSeparatorsPath.count { c -> c == '/' } }
-        if (wadFile == null) {
+        val wadFile = findWadFile(temp)
+        val htmlFile = findHtmlEntryPoint(temp)
+
+        val sourceRoot = when {
+            wadFile != null -> wadFile.parentFile ?: temp
+            htmlFile != null -> htmlFile.parentFile ?: temp
+            else -> {
+                temp.deleteRecursively()
+                library.discardStaging(staged)
+                return@withContext Result.MissingWad(fallbackName)
+            }
+        }
+
+        try {
+            for (child in sourceRoot.listFiles() ?: emptyArray()) {
+                child.copyRecursively(File(staged.bundleDir, child.name), overwrite = true)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Copy failed while promoting ZIP root", e)
             temp.deleteRecursively()
             library.discardStaging(staged)
-            return@withContext Result.MissingWad(fallbackName)
+            return@withContext Result.Failure("Couldn't copy ZIP contents: ${e.message}")
+        } finally {
+            temp.deleteRecursively()
         }
 
-        // The directory holding the WAD becomes the bundle root; copy its contents into the bundle.
-        val wadRoot = wadFile.parentFile ?: temp
-        for (child in wadRoot.listFiles() ?: emptyArray()) {
-            child.copyRecursively(File(staged.bundleDir, child.name), overwrite = true)
-        }
-        temp.deleteRecursively()
-
-        finalize(library, staged, wadFile.name, fallbackName, null, emptyList())
+        finalizeFromBundle(
+            library = library,
+            staged = staged,
+            bundleRoot = staged.bundleDir,
+            folderName = fallbackName
+        )
     }
 
     /**
      * Import a ZIP already held in memory as a [ByteArray] (e.g. a sample game downloaded over HTTP).
-     * Same locate-the-WAD-anywhere behavior as the Uri overload. [fallbackName] is used as the
-     * suggested title when the WAD has no GEN8 name.
+     * Same locate-the-entry-point behavior as the Uri overload. [fallbackName] is used as the
+     * suggested title when the imported content has no better title.
      */
     suspend fun importZip(
         library: GameLibrary,
@@ -170,8 +193,6 @@ object GameImporter {
     ): Result = withContext(Dispatchers.IO) {
         val staged = library.beginStaging()
 
-        // Extract into a sibling temp dir first so we can locate the WAD wherever it is, then move
-        // its containing directory into the bundle.
         val temp = File(staged.bundleDir.parentFile, "extract-tmp")
         if (temp.exists()) temp.deleteRecursively()
         temp.mkdirs()
@@ -185,84 +206,133 @@ object GameImporter {
             return@withContext Result.Failure("Couldn't extract ZIP: ${e.message}")
         }
 
-        // Prefer the shallowest WAD, so a root data.win beats one nested inside a subfolder
-        val wadFile = temp.walkTopDown().filter { it.isFile && it.name in WAD_FILENAMES }.minByOrNull { it.relativeTo(temp).invariantSeparatorsPath.count { c -> c == '/' } }
-        if (wadFile == null) {
+        val wadFile = findWadFile(temp)
+        val htmlFile = findHtmlEntryPoint(temp)
+
+        val sourceRoot = when {
+            wadFile != null -> wadFile.parentFile ?: temp
+            htmlFile != null -> htmlFile.parentFile ?: temp
+            else -> {
+                temp.deleteRecursively()
+                library.discardStaging(staged)
+                return@withContext Result.MissingWad(name)
+            }
+        }
+
+        try {
+            for (child in sourceRoot.listFiles() ?: emptyArray()) {
+                child.copyRecursively(File(staged.bundleDir, child.name), overwrite = true)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Copy failed while promoting in-memory ZIP root", e)
             temp.deleteRecursively()
             library.discardStaging(staged)
-            return@withContext Result.MissingWad(name)
+            return@withContext Result.Failure("Couldn't copy ZIP contents: ${e.message}")
+        } finally {
+            temp.deleteRecursively()
         }
-
-        // The directory holding the WAD becomes the bundle root; copy its contents into the bundle.
-        val wadRoot = wadFile.parentFile ?: temp
-        for (child in wadRoot.listFiles() ?: emptyArray()) {
-            child.copyRecursively(File(staged.bundleDir, child.name), overwrite = true)
-        }
-        temp.deleteRecursively()
 
         val decodedIcon = BitmapFactory.decodeByteArray(iconAsBytes, 0, iconAsBytes.size)
+        val additionalIconCandidates =
+            decodedIcon?.let {
+                listOf(
+                    IconCandidate(
+                        it,
+                        "Sample",
+                        max(it.width, it.height)
+                    )
+                )
+            } ?: emptyList()
 
-        finalize(library, staged, wadFile.name, name, name, listOf(IconCandidate(decodedIcon, "Sample", max(decodedIcon.width, decodedIcon.height))))
+        finalizeFromBundle(
+            library = library,
+            staged = staged,
+            bundleRoot = staged.bundleDir,
+            folderName = name,
+            additionalIconCandidates = additionalIconCandidates
+        )
     }
 
     /**
-     * Shared tail for both import paths: verify the WAD landed in the bundle, peek its GEN8
-     * metadata, scan for icon candidates, and build the [Result.Success]. On the (bug) case where
-     * the WAD is missing after copy, discards the staging dir and returns [Result.Failure].
+     * Shared tail for both import paths: verify the bundle contains a supported entry point,
+     * derive metadata, scan icons, and build the [Result.Success].
      */
-    private fun finalize(
+    private fun finalizeFromBundle(
         library: GameLibrary,
         staged: GameLibrary.StagedGame,
-        wadFilename: String,
-        fallbackName: String,
-        overrideName: String? = null,
-        additionalIconCandidates: List<IconCandidate>
+        bundleRoot: File,
+        folderName: String,
+        additionalIconCandidates: List<IconCandidate> = emptyList(),
     ): Result {
-        val wadFile = File(staged.bundleDir, wadFilename)
-        if (!wadFile.exists()) {
-            // Shouldn't happen — we just confirmed the WAD existed and the copy didn't throw.
-            // But if it does, fail loud rather than letting the native parser explode.
-            library.discardStaging(staged)
-            return Result.Failure("WAD vanished after copy (this is a bug).")
+        val wadFile = findWadFile(bundleRoot)
+        if (wadFile != null) {
+            if (!wadFile.exists()) {
+                library.discardStaging(staged)
+                return Result.Failure("WAD vanished after copy (this is a bug).")
+            }
+
+            val (suggestedTitle, wadVersion) = ParsedDataWin.parseLight(wadFile.absolutePath)?.use { dw ->
+                val name = (dw.displayName ?: dw.name)?.takeIf { it.isNotBlank() }
+                name to dw.wadVersion
+            } ?: (null to -1)
+
+            val iconCandidates = runCatching { scanIconCandidates(bundleRoot) }
+                .onFailure { Log.w(TAG, "Icon extraction failed for ${staged.id}", it) }
+                .getOrDefault(emptyList()) + additionalIconCandidates
+
+            return Result.Success(
+                staged = staged,
+                gameType = GameEntry.GameType.GameMakerStudio(
+                    wadVersion = wadVersion,
+                    filename = wadFile.name
+                ),
+                suggestedTitle = suggestedTitle ?: folderName,
+                folderName = folderName,
+                iconCandidates = iconCandidates,
+                wadFilename = wadFile.name,
+                wadVersion = wadVersion,
+                entryPoint = null,
+            )
         }
 
-        // Peek metadata. parseLight may exit() on a corrupt WAD — accepted (see memory).
-        val (suggestedTitle, wadVersion) = ParsedDataWin.parseLight(wadFile.absolutePath)?.use { dw ->
-            val name = (dw.displayName ?: dw.name)?.takeIf { it.isNotBlank() }
-            name to dw.wadVersion
-        } ?: (null to -1)
+        val htmlFile = findHtmlEntryPoint(bundleRoot)
+            ?: return Result.Failure("Copied bundle does not contain a supported WAD or HTML entry point.")
 
-        val iconCandidates = runCatching { scanIconCandidates(staged.bundleDir) }
+        val entryPoint = htmlFile.relativeTo(bundleRoot).invariantSeparatorsPath
+        val htmlTitle = extractHtmlTitle(htmlFile)
+        val iconCandidates = runCatching { scanIconCandidates(bundleRoot) }
             .onFailure { Log.w(TAG, "Icon extraction failed for ${staged.id}", it) }
             .getOrDefault(emptyList()) + additionalIconCandidates
 
         return Result.Success(
             staged = staged,
-            wadFilename = wadFilename,
-            suggestedTitle = overrideName ?: suggestedTitle ?: fallbackName,
-            wadVersion = wadVersion,
-            folderName = fallbackName,
+            gameType = GameEntry.GameType.Html(
+                sourceUrl = null,
+                entryPoint = entryPoint
+            ),
+            suggestedTitle = htmlTitle ?: folderName,
+            folderName = folderName,
             iconCandidates = iconCandidates,
+            wadFilename = null,
+            wadVersion = null,
+            entryPoint = entryPoint,
         )
     }
 
-
     /**
-     * Recursive DocumentFile → File copy. Mirrors `GameActivity.extractAssetTree`'s shape but
-     * sources from the SAF tree instead of assets/.
+     * Recursive DocumentFile → File copy. Mirrors the SAF tree directly into the staging bundle.
      */
     private fun copyTree(context: Context, src: DocumentFile, dest: File, writeFileCallback: (String) -> (Unit)) {
         if (!dest.exists()) dest.mkdirs()
+
         for (child in src.listFiles()) {
             val name = child.name ?: continue
             val target = File(dest, name)
+
             if (child.isDirectory) {
                 copyTree(context, child, target, writeFileCallback)
             } else if (child.isFile) {
-                val fileName = child.name
-                if (fileName != null) {
-                    writeFileCallback.invoke(fileName)
-                }
+                writeFileCallback.invoke(target.name)
                 context.contentResolver.openInputStream(child.uri)?.use { input ->
                     target.outputStream().use { output -> input.copyTo(output) }
                 } ?: error("Could not open child $name for reading")
@@ -271,9 +341,59 @@ object GameImporter {
     }
 
     /**
-     * Extract a user-picked zip into [dest]. Mirrors the zip-slip guard and separator normalization
-     * from [SaveSlotZip.importZipIntoSlot] — entries with `..` in their path are refused so a
-     * malicious archive can't escape [dest].
+     * Finds the shallowest WAD in a tree. If there are multiple, prefer the one closest to the root.
+     */
+    private fun findWadFile(root: File): File? {
+        return root.walkTopDown()
+            .filter { it.isFile && it.name in WAD_FILENAMES }
+            .minByOrNull { file ->
+                file.relativeTo(root).invariantSeparatorsPath.count { c -> c == '/' }
+            }
+    }
+
+    /**
+     * Finds the best HTML entry point in a tree.
+     *
+     * Preference order:
+     * 1) `index.html` / `index.htm`
+     * 2) shallowest `.html` / `.htm` file
+     */
+    private fun findHtmlEntryPoint(root: File): File? {
+        val preferred = root.walkTopDown()
+            .firstOrNull { file ->
+                file.isFile && HTML_ENTRY_FILENAMES.any { file.name.equals(it, ignoreCase = true) }
+            }
+
+        if (preferred != null) return preferred
+
+        return root.walkTopDown()
+            .filter { file ->
+                file.isFile &&
+                    (file.name.endsWith(".html", ignoreCase = true) ||
+                        file.name.endsWith(".htm", ignoreCase = true))
+            }
+            .minByOrNull { file ->
+                file.relativeTo(root).invariantSeparatorsPath.count { c -> c == '/' }
+            }
+    }
+
+    /**
+     * Tries to extract a title from an HTML file.
+     */
+    private fun extractHtmlTitle(file: File): String? {
+        return runCatching {
+            val text = file.readText()
+            val match = Regex("(?is)<title[^>]*>(.*?)</title>").find(text) ?: return null
+            val title = match.groupValues[1]
+                .replace(Regex("(?is)<[^>]+>"), "")
+                .trim()
+
+            title.takeIf { it.isNotBlank() }
+        }.getOrNull()
+    }
+
+    /**
+     * Extract a user-picked zip into [dest]. Mirrors the zip-slip guard and separator normalization.
      */
     private fun extractZip(context: Context, source: Uri, dest: File, writeFileCallback: (String) -> (Unit)) {
         val input = context.contentResolver.openInputStream(source)
@@ -292,11 +412,12 @@ object GameImporter {
             while (true) {
                 val entry = zip.nextEntry ?: break
                 val safeName = entry.name.replace('\\', '/')
+
                 if (safeName.contains("..")) {
-                    // Defend against zip slip — refuse entries that would escape the dest dir.
                     zip.closeEntry()
                     continue
                 }
+
                 val target = File(dest, safeName)
                 if (entry.isDirectory) {
                     target.mkdirs()
