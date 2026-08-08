@@ -28,11 +28,11 @@ android {
     }
 
     defaultConfig {
-        applicationId = "net.perfectdreams.butterscotch"
+        applicationId = "com.fdev.spaghetti"
         minSdk = 24
         targetSdk = 36
         versionCode = 32
-        versionName = "2026.06.21-1"
+        versionName = "0.7-spaghetti"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
