@@ -23,34 +23,45 @@ jobs:
         uses: actions/setup-java@v4
         with:
           java-version: '25'
-          distribution: 'temurin'
-          cache: 'gradle'
+          distribution: temurin
+          cache: gradle
           cache-dependency-path: src/android/frontend/gradle/wrapper/gradle-wrapper.properties
 
       - name: Make Gradle executable
         run: chmod +x src/android/frontend/gradlew
 
-      - name: Build Android App Bundle and APK
+      - name: Build release APK and AAB
         working-directory: src/android/frontend
         run: |
-          ./gradlew bundleRelease assembleRelease --stacktrace
+          set -euo pipefail
+          ./gradlew clean assembleRelease bundleRelease --stacktrace
 
-      # Os artifacts só são publicados em builds da main
-      # ou em execuções manuais do workflow.
-      - name: Upload Android App Bundle
+      - name: Stage Android artifacts
         if: github.event_name != 'pull_request'
-        uses: actions/upload-artifact@v4
-        with:
-          name: spaghetti-android-aab
-          path: src/android/frontend/app/build/outputs/bundle/release/app-release.aab
-          if-no-files-found: error
-          retention-days: 1
+        run: |
+          set -euo pipefail
+          आउट="$RUNNER_TEMP/android-artifacts"
+          mkdir -p "$OUT"
+
+          find src/android/frontend/app/build/outputs -type f \( -name "*.apk" -o -name "*.aab" \) -exec cp -v {} "$OUT"/ \;
+
+          echo "Artifacts staged in:"
+          ls -lah "$OUT"
 
       - name: Upload Android APK
         if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
         with:
-          name: spaghetti-android-apk
-          path: src/android/frontend/app/build/outputs/apk/release/app-release.apk
+          name: butterscotch-android-apk
+          path: ${{ runner.temp }}/android-artifacts/*.apk
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Upload Android AAB
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: butterscotch-android-aab
+          path: ${{ runner.temp }}/android-artifacts/*.aab
           if-no-files-found: error
           retention-days: 1
