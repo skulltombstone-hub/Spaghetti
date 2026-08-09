@@ -23,8 +23,8 @@ jobs:
         uses: actions/setup-java@v4
         with:
           java-version: '25'
-          distribution: temurin
-          cache: gradle
+          distribution: 'temurin'
+          cache: 'gradle'
           cache-dependency-path: src/android/frontend/gradle/wrapper/gradle-wrapper.properties
 
       - name: Make Gradle executable
@@ -33,27 +33,16 @@ jobs:
       - name: Build release APK and AAB
         working-directory: src/android/frontend
         run: |
-          set -euo pipefail
           ./gradlew clean assembleRelease bundleRelease --stacktrace
 
-      - name: Stage Android artifacts
-        if: github.event_name != 'pull_request'
-        run: |
-          set -euo pipefail
-          आउट="$RUNNER_TEMP/android-artifacts"
-          mkdir -p "$OUT"
-
-          find src/android/frontend/app/build/outputs -type f \( -name "*.apk" -o -name "*.aab" \) -exec cp -v {} "$OUT"/ \;
-
-          echo "Artifacts staged in:"
-          ls -lah "$OUT"
-
+      # Os artefatos só são publicados em builds da main
+      # ou em execuções manuais do workflow.
       - name: Upload Android APK
         if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
         with:
           name: butterscotch-android-apk
-          path: ${{ runner.temp }}/android-artifacts/*.apk
+          path: src/android/frontend/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
           retention-days: 1
 
@@ -62,6 +51,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: butterscotch-android-aab
-          path: ${{ runner.temp }}/android-artifacts/*.aab
+          path: src/android/frontend/app/build/outputs/bundle/release/app-release.aab
           if-no-files-found: error
           retention-days: 1
