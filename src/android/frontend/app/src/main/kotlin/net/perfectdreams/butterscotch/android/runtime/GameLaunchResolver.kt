@@ -1,15 +1,16 @@
 package net.perfectdreams.butterscotch.android.runtime
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import net.perfectdreams.butterscotch.android.library.GameEntry
-import java.util.UUID
 
 /**
- * Small helper for the launcher UI.
+ * Small helper used by launcher UI screens.
  *
- * The launcher asks for a game entry and gets a ready-to-launch Intent.
- * No screen should need to know which activity class belongs to which game type.
+ * This keeps the launcher from knowing which activity belongs to which
+ * game type. It asks the runtime registry for the correct runtime and
+ * receives a launch Intent in return.
  */
 object GameLaunchResolver {
     fun buildLaunchIntent(
@@ -17,7 +18,22 @@ object GameLaunchResolver {
         entry: GameEntry
     ): Intent? {
         val runtime = EngineRuntimeRegistry.resolve(entry.gameType) ?: return null
-        return runtime.buildLaunchIntent(context, entry.id)
+        val intent = runtime.buildLaunchIntent(context, entry.id)
+
+        if (context !is Activity) {
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+
+        return intent
+    }
+
+    fun launch(
+        context: Context,
+        entry: GameEntry
+    ): Boolean {
+        val intent = buildLaunchIntent(context, entry) ?: return false
+        context.startActivity(intent)
+        return true
     }
 
     fun runtimeName(entry: GameEntry): String? {
