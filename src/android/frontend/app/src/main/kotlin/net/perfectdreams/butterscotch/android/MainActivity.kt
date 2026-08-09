@@ -92,6 +92,8 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        var startRoute: Route = Route.Launcher
+        
         enableEdgeToEdge(
             // Make the button background not LIGHT
             navigationBarStyle = SystemBarStyle.dark(
@@ -106,6 +108,12 @@ class MainActivity : ComponentActivity() {
                     ButterscotchApp(gameLibrary, layoutLibrary, settingsStore, updateAvailableClickCallback)
                     if (!splashGone) {
                         SplashReveal(onFinished = { splashGone = true })
+            ButterscotchApp(
+                gameLibrary,
+                layoutLibrary,
+                settingsStore,
+                updateAvailableClickCallback,
+                startRoute)
                     }
                 }
             }
@@ -125,5 +133,9 @@ class MainActivity : ComponentActivity() {
     companion object {
         const val ACTION_LAUNCH_GAME = "net.perfectdreams.butterscotch.android.action.LAUNCH_GAME"
         const val ACTION_OPEN_LAYOUT_MANAGER = "net.perfectdreams.butterscotch.android.action.OPEN_LAYOUT_MANAGER"
+        if (intent?.action == ACTION_OPEN_LAYOUT_MANAGER) {
+            startRoute = Route.LayoutManager
+            intent.action = null
+        }
     }
 }
