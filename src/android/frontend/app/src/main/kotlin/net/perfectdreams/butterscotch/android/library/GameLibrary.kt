@@ -8,42 +8,19 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import net.perfectdreams.butterscotch.android.layouts.LayoutLibrary
+import net.perfectdreams.butterscotch.android.runtime.EngineRuntimeRegistry
 import java.io.File
 import java.util.UUID
 
-/**
- * Persistent index of imported games. Backed by a single `library.json` under
- * `filesDir/butterscotch/`; per-game files live under `filesDir/butterscotch/games/<id>/`.
- *
- * On-disk layout:
- * ```
- * filesDir/butterscotch/
- *   library.json
- *   games/<id>/
- *     bundle/        <- contains the WAD file (data.win / game.unx / …) and any sibling assets
- *     saves/
- *       <slotId>/    <- one folder per save slot, UUID-named so renames/deletes don't
- *                       shuffle indices
- * ```
- *
- * Not thread-safe — call from the UI thread. The library is tiny (one row per game) so we just
- * rewrite the whole JSON file on each mutation; no DB, no diffing.
- *
- * [entries] is a [androidx.compose.runtime.snapshots.SnapshotStateList] — composables reading it recompose automatically when
- * [commit]/[remove] mutate the list, so screens that share a single [GameLibrary] instance stay in
- * sync without needing lifecycle-based refresh tricks.
- */
 class GameLibrary private constructor(
     private val rootDir: File,
     private val indexFile: File,
     initial: List<GameEntry>
 ) {
-    /** Live, Compose-observable list of entries in import order. */
     val entries: SnapshotStateList<GameEntry> = mutableStateListOf<GameEntry>().apply { addAll(initial) }
 
     fun bundleDir(entry: GameEntry): File = File(gameDir(entry.id), "bundle")
 
-    /** Directory of the entry's currently active slot. Invariant: every entry has exactly one active slot. */
     fun savesDir(entry: GameEntry): File {
         val activeSlot = entry.saveSlots.first { it.active }
         return slotDir(entry, activeSlot.id)
@@ -54,31 +31,42 @@ class GameLibrary private constructor(
     fun logsDir(entry: GameEntry): File = File(gameDir(entry.id), "logs")
     fun logsDir(entryId: UUID): File = File(gameDir(entryId), "logs")
 
-    fun wadPath(entry: GameEntry): File = File(
-        bundleDir(entry),
-        when (val gameType = entry.gameType) {
-            is GameEntry.GameType.GameMakerStudio -> gameType.filename
-            is GameEntry.GameType.Html -> gameType.entryPoint
-        }
-    )
+    /**
+     * Returns the main executable path for the entry.
+     *
+     * For current runtimes:
+     * - GameMaker uses the imported WAD / data.win-like file
+     * - HTML uses the entry point HTML file
+     *
+     * In the new architecture this method stays small because the runtime
+     * itself owns launch behavior, but the library still needs to know the
+     * canonical primary file.
+     */
+    fun mainFile(entry: GameEntry): File {
+        return File(
+            bundleDir(entry),
+            when (val gameType = entry.gameType) {
+                is GameEntry.GameType.GameMakerStudio -> gameType.filename
+                is GameEntry.GameType.Html -> gameType.entryPoint
+            }
+        )
+    }
+
+    /**
+     * Kept for backward compatibility with existing code.
+     */
+    fun wadPath(entry: GameEntry): File = mainFile(entry)
 
     fun gameDir(id: UUID): File = File(rootDir, "games/data/$id")
 
-    /** Per-game derived assets (icon, future thumbnails). Separate from `data/` so we can rebuild them. */
     fun assetsDir(id: UUID): File = File(rootDir, "games/assets/$id")
     fun assetsDir(entry: GameEntry): File = assetsDir(entry.id)
 
-    /** Cached PNG icon for [id], if extraction succeeded. The file may not exist. */
     fun iconFile(id: UUID): File = File(assetsDir(id), "icon.png")
     fun iconFile(entry: GameEntry): File = iconFile(entry.id)
 
     fun findById(id: UUID): GameEntry? = entries.firstOrNull { it.id == id }
 
-    /**
-     * Allocate a fresh per-game directory for the importer to stage files into. The directory is
-     * created on disk but no library entry exists yet — call [commit] once staging succeeds, or
-     * [discardStaging] to delete it if the user cancels.
-     */
     fun beginStaging(): StagedGame {
         val id = UUID.randomUUID()
         val dir = gameDir(id).apply { mkdirs() }
@@ -88,11 +76,6 @@ class GameLibrary private constructor(
         return StagedGame(id, File(dir, "bundle"), File(dir, "saves"))
     }
 
-    /**
-     * Add a staged import to the library and persist. If [icon] is non-null, it is encoded as PNG
-     * into the per-game assets dir as `icon.png`; pass null to commit without an icon (the
-     * library list will fall back to the app icon at display time).
-     */
     fun commit(
         staged: StagedGame,
         title: String,
@@ -108,6 +91,7 @@ class GameLibrary private constructor(
     ) {
         val initialSlotId = UUID.randomUUID()
         File(gameDir(staged.id), "saves/$initialSlotId").mkdirs()
+
         val entry = GameEntry(
             id = staged.id,
             title = title,
@@ -129,8 +113,8 @@ class GameLibrary private constructor(
             enableWidescreenHack = enableWidescreenHack,
             postProcessing = postProcessing,
         )
+
         entries.add(entry)
-        // Sync order after adding a new entry
         syncOrder()
 
         if (icon != null) {
@@ -143,7 +127,6 @@ class GameLibrary private constructor(
         save()
     }
 
-    /** Recursively delete a staged directory the user chose not to keep. */
     fun discardStaging(staged: StagedGame) {
         gameDir(staged.id).deleteRecursively()
     }
@@ -172,12 +155,6 @@ class GameLibrary private constructor(
         save()
     }
 
-    /**
-     * Replace (or clear) the per-game icon at runtime. Writes the bitmap as PNG to
-     * `assetsDir/icon.png`, or deletes it when [bitmap] is null. Bumps the entry afterward so any
-     * UI that reads the icon file recomposes — without that, the library list would happily keep
-     * displaying the old decoded bitmap from its remember cache.
-     */
     fun setIcon(id: UUID, bitmap: Bitmap?) {
         val out = iconFile(id)
         if (bitmap == null) {
@@ -191,15 +168,10 @@ class GameLibrary private constructor(
                 return
             }
         }
-        // Bump revision so observers (notably GameIcon's remember cache) recompose.
         update(id) { it.copy(iconRevision = it.iconRevision + 1) }
         save()
     }
 
-    /**
-     * Adds a new empty save slot to [gameId]. Does NOT make it active — call [setActiveSlot] if the
-     * caller wants that. Returns the freshly created slot id.
-     */
     fun addSlot(gameId: UUID, name: String): UUID {
         val slotId = UUID.randomUUID()
         update(gameId) { entry ->
@@ -217,11 +189,6 @@ class GameLibrary private constructor(
         return slotId
     }
 
-    /**
-     * Deletes [slotId] from [gameId], including its on-disk directory. Refuses to remove the last
-     * slot (every game must have at least one). If the deleted slot was active, the first
-     * remaining slot becomes active.
-     */
     fun removeSlot(gameId: UUID, slotId: UUID) {
         val entry = findById(gameId) ?: error("No such game: $gameId")
         require(entry.saveSlots.size > 1) { "Cannot delete the last save slot" }
@@ -233,22 +200,21 @@ class GameLibrary private constructor(
         } else {
             remaining
         }
+
         update(gameId) { it.copy(saveSlots = finalSlots) }
         slotDir(entry, slotId).deleteRecursively()
         save()
     }
 
-    /**
-     * Duplicates [sourceSlotId] in [gameId] into a new inactive slot named [name], copying the
-     * source slot's directory contents verbatim. Returns the freshly created slot id.
-     */
     fun copySlot(gameId: UUID, sourceSlotId: UUID, name: String): UUID {
         val entry = findById(gameId) ?: error("No such game: $gameId")
         require(entry.saveSlots.any { it.id == sourceSlotId }) { "Unknown slot $sourceSlotId for game $gameId" }
+
         val newId = UUID.randomUUID()
         val srcDir = slotDir(entry, sourceSlotId)
         val dstDir = slotDir(entry, newId).apply { mkdirs() }
         if (srcDir.exists()) srcDir.copyRecursively(dstDir, overwrite = true)
+
         update(gameId) { e ->
             e.copy(
                 saveSlots = e.saveSlots + GameEntry.SaveSlot(
@@ -258,6 +224,7 @@ class GameLibrary private constructor(
                 )
             )
         }
+
         save()
         return newId
     }
@@ -288,16 +255,11 @@ class GameLibrary private constructor(
         val tmp = File(indexFile.parentFile, indexFile.name + ".tmp")
         tmp.writeText(payload)
         if (!tmp.renameTo(indexFile)) {
-            // renameTo can fail across filesystems or if the target exists on some FUSE mounts; fall
-            // back to overwrite + delete-tmp so we don't lose the write entirely.
             indexFile.writeText(payload)
             tmp.delete()
         }
     }
 
-    /**
-     * Sorts the entries, we don't automatically sort it because we want to keep the entries stable when favoriting/unfavoriting
-     */
     fun syncOrder() {
         entries.sortWith(compareByDescending<GameEntry> { it.favorited }.thenBy { it.title })
     }
@@ -309,11 +271,6 @@ class GameLibrary private constructor(
         private const val ROOT_DIR_NAME = "butterscotch"
         private const val INDEX_FILE_NAME = "library.json"
 
-        // prettyPrint: library.json is small and occasionally inspected by hand.
-        // ignoreUnknownKeys: forward-compat — a newer file written by a future version that adds
-        // fields can still be read by older code instead of crashing.
-        // encodeDefaults = false: future fields with default values stay out of files that don't
-        // need them, keeping the on-disk shape minimal.
         private val json = Json {
             prettyPrint = true
             ignoreUnknownKeys = true
