@@ -12,8 +12,8 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -310,6 +310,7 @@ private fun HtmlWebView(
 
                     useWideViewPort = true
                     loadWithOverviewMode = true
+                    setInitialScale(1)
 
                     builtInZoomControls = false
                     displayZoomControls = false
@@ -318,12 +319,20 @@ private fun HtmlWebView(
                     cacheMode = WebSettings.LOAD_DEFAULT
 
                     userAgentString =
-                        "$userAgentString SpaghettiHTMLRunner/1.0"
+                        "$userAgentString SpaghettiHTMLRunner/1.1"
                 }
 
                 webChromeClient = WebChromeClient()
 
                 webViewClient = object : WebViewClient() {
+
+                    override fun onPageFinished(
+                        view: WebView,
+                        url: String?
+                    ) {
+                        super.onPageFinished(view, url)
+                        injectHtmlViewportFixes(view)
+                    }
 
                     override fun shouldOverrideUrlLoading(
                         view: WebView,
@@ -353,6 +362,32 @@ private fun HtmlWebView(
             }
         }
     )
+}
+
+private fun injectHtmlViewportFixes(webView: WebView) {
+    webView.evaluateJavascript(
+        createHtmlViewportFixScript(),
+        null
+    )
+}
+
+private fun createHtmlViewportFixScript(): String {
+    return """
+        (() => {
+            let viewport = document.querySelector('meta[name="viewport"]');
+
+            if (!viewport) {
+                viewport = document.createElement("meta");
+                viewport.setAttribute("name", "viewport");
+                document.head.appendChild(viewport);
+            }
+
+            viewport.setAttribute(
+                "content",
+                "width=device-width, initial-scale=1.0, minimum-scale=0.25, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover"
+            );
+        })();
+    """.trimIndent()
 }
 
 @Composable
@@ -390,6 +425,20 @@ private fun HtmlControls(
     BoxWithConstraints(
         modifier = Modifier.fillMaxSize()
     ) {
+        val controlCanvasHeight =
+            if (isLandscape) {
+                maxHeight
+            } else {
+                maxHeight * 0.62f
+            }
+
+        val controlCanvasTop =
+            if (isLandscape) {
+                0.dp
+            } else {
+                maxHeight - controlCanvasHeight
+            }
+
         layout.elements.forEach { element ->
             when (element) {
 
@@ -398,7 +447,11 @@ private fun HtmlControls(
                         element = element,
                         onKeyDown = onKeyDown,
                         onKeyUp = onKeyUp,
-                        modifier = placementForElement(element)
+                        modifier = placementForElement(
+                            element = element,
+                            canvasTop = controlCanvasTop,
+                            canvasHeight = controlCanvasHeight
+                        )
                     )
                 }
 
@@ -407,7 +460,11 @@ private fun HtmlControls(
                         element = element,
                         onKeyDown = onKeyDown,
                         onKeyUp = onKeyUp,
-                        modifier = placementForElement(element)
+                        modifier = placementForElement(
+                            element = element,
+                            canvasTop = controlCanvasTop,
+                            canvasHeight = controlCanvasHeight
+                        )
                     )
                 }
 
@@ -415,7 +472,11 @@ private fun HtmlControls(
                     HtmlMenuButton(
                         element = element,
                         onClick = onMenu,
-                        modifier = placementForElement(element)
+                        modifier = placementForElement(
+                            element = element,
+                            canvasTop = controlCanvasTop,
+                            canvasHeight = controlCanvasHeight
+                        )
                     )
                 }
 
@@ -437,13 +498,15 @@ private fun HtmlControls(
 
 @Composable
 private fun BoxWithConstraintsScope.placementForElement(
-    element: GamepadElement
+    element: GamepadElement,
+    canvasTop: androidx.compose.ui.unit.Dp,
+    canvasHeight: androidx.compose.ui.unit.Dp
 ): Modifier {
     val referenceSize =
-        if (maxWidth < maxHeight) {
+        if (maxWidth < canvasHeight) {
             maxWidth
         } else {
-            maxHeight
+            canvasHeight
         }
 
     val size = referenceSize * element.scale.toFloat()
@@ -453,7 +516,7 @@ private fun BoxWithConstraintsScope.placementForElement(
             size / 2f
 
     val y =
-        maxHeight * element.positionY.toFloat() -
+        canvasTop + canvasHeight * element.positionY.toFloat() -
             size / 2f
 
     return Modifier
