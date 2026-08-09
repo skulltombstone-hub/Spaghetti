@@ -17,10 +17,12 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Set up JDK 25
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: '25'
           distribution: 'temurin'
@@ -30,13 +32,95 @@ jobs:
       - name: Make Gradle executable
         run: chmod +x src/android/frontend/gradlew
 
+      # Pull requests from forks do not receive repository secrets.
+      # Release artifacts are only published for main/manual runs,
+      # so only those runs need the release keystore.
+      - name: Prepare signing keystore
+        if: github.event_name != 'pull_request'
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+
+          : "${ANDROID_KEYSTORE_BASE64:?ANDROID_KEYSTORE_BASE64 secret is not available}"
+
+          KEYSTORE_PATH="$RUNNER_TEMP/release-keystore.jks"
+
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
+
+          test -s "$KEYSTORE_PATH"
+
+          chmod 600 "$KEYSTORE_PATH"
+
+          echo "KEYSTORE_PATH=$KEYSTORE_PATH" >> "$GITHUB_ENV"
+
       - name: Build release APK and AAB
         working-directory: src/android/frontend
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          ./gradlew clean assembleRelease bundleRelease --stacktrace
+          set -euo pipefail
 
-      # Os artefatos só são publicados em builds da main
-      # ou em execuções manuais do workflow.
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            ./gradlew clean assembleRelease bundleRelease --stacktrace --warning-mode all
+          else
+            ./gradlew clean assembleRelease bundleRelease \
+              -Pandroid.injected.signing.store.file="$KEYSTORE_PATH" \
+              -Pandroid.injected.signing.store.password="$ANDROID_KEYSTORE_PASSWORD" \
+              -Pandroid.injected.signing.key.alias="$ANDROID_KEY_ALIAS" \
+              -Pandroid.injected.signing.key.password="$ANDROID_KEY_PASSWORD" \
+              --stacktrace \
+              --warning-mode all
+          fi
+
+      # This step deliberately verifies the exact files that the upload
+      # steps are going to consume. If Gradle ever changes the output,
+      # the workflow will tell us what actually exists instead of failing
+      # with a vague upload-artifact error.
+      - name: Verify release artifacts
+        if: github.event_name != 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          OUTPUT_DIR="src/android/frontend/app/build/outputs"
+
+          echo "=== All APK outputs ==="
+          find "$OUTPUT_DIR" -type f -name "*.apk" -print
+
+          echo
+          echo "=== All AAB outputs ==="
+          find "$OUTPUT_DIR" -type f -name "*.aab" -print
+
+          APK="src/android/frontend/app/build/outputs/apk/release/app-release.apk"
+          AAB="src/android/frontend/app/build/outputs/bundle/release/app-release.aab"
+
+          echo
+          echo "=== Expected release artifacts ==="
+
+          if [ ! -f "$APK" ]; then
+            echo "::error::Expected signed release APK was not produced: $APK"
+            echo "::error::The files actually produced were:"
+            find "$OUTPUT_DIR" -type f \( -name "*.apk" -o -name "*.aab" \) -print
+            exit 1
+          fi
+
+          if [ ! -f "$AAB" ]; then
+            echo "::error::Expected release AAB was not produced: $AAB"
+            echo "::error::The files actually produced were:"
+            find "$OUTPUT_DIR" -type f \( -name "*.apk" -o -name "*.aab" \) -print
+            exit 1
+          fi
+
+          echo "APK:"
+          ls -lh "$APK"
+
+          echo
+          echo "AAB:"
+          ls -lh "$AAB"
+
       - name: Upload Android APK
         if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
