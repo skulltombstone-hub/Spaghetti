@@ -1,7 +1,6 @@
 package net.perfectdreams.butterscotch.android.screens
 
 import android.content.Context
-import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.widget.Toast
@@ -75,8 +74,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import net.perfectdreams.butterscotch.android.GameActivity
-import net.perfectdreams.butterscotch.android.HtmlGameActivity
 import net.perfectdreams.butterscotch.android.R
 import net.perfectdreams.butterscotch.android.Route
 import net.perfectdreams.butterscotch.android.components.ButterscotchBobImage
@@ -84,6 +81,7 @@ import net.perfectdreams.butterscotch.android.components.ButterscotchTopBar
 import net.perfectdreams.butterscotch.android.components.FrameAnimationImage
 import net.perfectdreams.butterscotch.android.library.GameEntry
 import net.perfectdreams.butterscotch.android.library.GameLibrary
+import net.perfectdreams.butterscotch.android.runtime.GameLaunchResolver
 
 /**
  * The library list.
@@ -335,35 +333,12 @@ fun LauncherScreen(
                             entry = entry,
 
                             onLaunch = {
-                                when (entry.gameType) {
-
-                                    is GameEntry.GameType.GameMakerStudio -> {
-                                        context.startActivity(
-                                            Intent(
-                                                context,
-                                                GameActivity::class.java
-                                            ).apply {
-                                                putExtra(
-                                                    GameActivity.EXTRA_GAME_ID,
-                                                    entry.id.toString()
-                                                )
-                                            }
-                                        )
-                                    }
-
-                                    is GameEntry.GameType.Html -> {
-                                        context.startActivity(
-                                            Intent(
-                                                context,
-                                                HtmlGameActivity::class.java
-                                            ).apply {
-                                                putExtra(
-                                                    HtmlGameActivity.EXTRA_GAME_ID,
-                                                    entry.id.toString()
-                                                )
-                                            }
-                                        )
-                                    }
+                                if (!GameLaunchResolver.launch(context, entry)) {
+                                    Toast.makeText(
+                                        context,
+                                        "No runtime is registered for this game yet.",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
                                 }
                             },
 
@@ -422,13 +397,7 @@ private fun GameTile(
                     )
 
                     Text(
-                        when (val gameType = entry.gameType) {
-                            is GameEntry.GameType.GameMakerStudio ->
-                                "GM:S (WAD Version ${gameType.wadVersion})"
-
-                            is GameEntry.GameType.Html ->
-                                "HTML"
-                        }
+                        gameRuntimeSubtitle(entry)
                     )
                 }
             }
@@ -532,4 +501,19 @@ private fun appIconBitmap(context: Context): Bitmap {
     )
 
     return drawable.toBitmap()
+}
+
+private fun gameRuntimeSubtitle(entry: GameEntry): String {
+    val runtimeName = GameLaunchResolver.runtimeName(entry)
+
+    return when (val gameType = entry.gameType) {
+        is GameEntry.GameType.GameMakerStudio -> {
+            val baseName = runtimeName ?: "GameMaker"
+            "$baseName (WAD Version ${gameType.wadVersion})"
+        }
+
+        is GameEntry.GameType.Html -> {
+            runtimeName ?: "HTML"
+        }
+    }
 }
