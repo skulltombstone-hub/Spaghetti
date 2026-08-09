@@ -2,7 +2,7 @@ package net.perfectdreams.butterscotch.android.runtime
 
 import android.content.Context
 import android.content.Intent
-import net.perfectdreams.butterscotch.android.ButterscotchNativeActivity
+import net.perfectdreams.butterscotch.android.GameActivity
 import net.perfectdreams.butterscotch.android.library.GameEntry
 import java.util.UUID
 
@@ -23,8 +23,8 @@ object GameMakerRuntime : EngineRuntime {
         context: Context,
         gameId: UUID
     ): Intent {
-        return Intent(context, ButterscotchNativeActivity::class.java).apply {
-            putExtra(ButterscotchNativeActivity.EXTRA_GAME_ID, gameId.toString())
+        return Intent(context, GameActivity::class.java).apply {
+            putExtra(GameActivity.EXTRA_GAME_ID, gameId.toString())
         }
     }
 }
