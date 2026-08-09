@@ -83,6 +83,7 @@ import net.perfectdreams.butterscotch.android.components.ButterscotchTopBar
 import net.perfectdreams.butterscotch.android.components.FrameAnimationImage
 import net.perfectdreams.butterscotch.android.library.GameEntry
 import net.perfectdreams.butterscotch.android.library.GameLibrary
+import net.perfectdreams.butterscotch.android.HtmlGameActivity
 
 /**
  * The library list. Receives a [GameLibrary] from [net.perfectdreams.butterscotch.android.ButterscotchApp] — because its `entries` field
@@ -314,18 +315,52 @@ fun LauncherScreen(
                             entry = entry,
 
                             onLaunch = {
-                                context.startActivity(
-                                    Intent(
-                                        context,
-                                        GameActivity::class.java
-                                    ).apply {
-                                        putExtra(
-                                            GameActivity.Companion.EXTRA_GAME_ID,
-                                            entry.id.toString()
+                                when (val gameType = entry.gameType) {
+                                    is GameEntry.GameType.GameMakerStudio -> {
+                                        context.startActivity(
+                                            Intent(
+                                                context,
+                                                GameActivity::class.java
+                                            ).apply {
+                                                putExtra(
+                                                    GameActivity.Companion.EXTRA_GAME_ID,
+                                                    entry.id.toString()
+                                                )
+                                            }
                                         )
                                     }
-                                )
-                            },
+
+        is GameEntry.GameType.Html -> {
+            context.startActivity(
+                Intent(
+                    context,
+                    HtmlGameActivity::class.java
+                ).apply {
+                    putExtra(
+                        HtmlGameActivity.EXTRA_GAME_ID,
+                        entry.id.toString()
+                    )
+                }
+            )
+        }
+    }
+}
+                                    
+        is GameEntry.GameType.Html -> {
+            context.startActivity(
+                Intent(
+                    context,
+                    HtmlGameActivity::class.java
+                ).apply {
+                    putExtra(
+                        HtmlGameActivity.EXTRA_GAME_ID,
+                        entry.id.toString()
+                    )
+                }
+            )
+        }
+    }
+                            }
 
                             onOpenSettings = {
                                 nav.navigate(
