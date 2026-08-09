@@ -32,7 +32,7 @@ android {
         minSdk = 24
         targetSdk = 36
         versionCode = 32
-        versionName = "0.7-spaghetti"
+        versionName = "b1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
