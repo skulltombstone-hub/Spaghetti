@@ -1,26 +1,21 @@
 package net.perfectdreams.butterscotch.android
 
-import android.content.Intent
-import android.os.Build
+import android.annotation.SuppressLint
+import android.app.Activity
 import android.os.Bundle
-import android.view.ViewGroup
-import android.view.WindowManager
+import android.view.View
+import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.BackHandler
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
+import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -28,255 +23,410 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
+import net.perfectdreams.butterscotch.android.components.VirtualGamepad
 import net.perfectdreams.butterscotch.android.library.GameEntry
+import net.perfectdreams.butterscotch.android.library.GameLibrary
 import java.io.File
 
-class HtmlGameActivity : ComponentActivity() {
+/**
+ * HTML game runner.
+ *
+ * HTML games intentionally have their own Activity instead of sharing the
+ * GameMaker/Butterscotch renderer. The surrounding application infrastructure
+ * remains shared: library, import system, selected control layout and
+ * application storage.
+ */
+class HtmlGameActivity : AppCompatActivity() {
+
+    companion object {
+        const val EXTRA_GAME_ID = "game_id"
+    }
+
     private var webView: WebView? = null
+
+    private lateinit var gameLibrary: GameLibrary
+    private lateinit var gameEntry: GameEntry
+
+    private var showControls by mutableStateOf(true)
+    private var showMenu by mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Keep the screen on while the HTML runtime is active.
-        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        val gameId = intent.getStringExtra(EXTRA_GAME_ID)
 
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        WindowInsetsControllerCompat(window, window.decorView).apply {
-            hide(WindowInsetsCompat.Type.systemBars())
-            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        }
-
-        val gameIdAsString = intent.getStringExtra(EXTRA_GAME_ID)
-        if (gameIdAsString == null) {
-            finish()
-            return
-        }
-
-        val gameId = runCatching { java.util.UUID.fromString(gameIdAsString) }.getOrNull()
         if (gameId == null) {
             finish()
             return
         }
 
-        val gameLibrary = Libraries.loadGameLibrary(this.applicationContext)
-        val layoutLibrary = Libraries.loadLayoutLibrary(this.applicationContext)
+        gameLibrary = GameLibrary(this)
 
-        val entry = gameLibrary.findById(gameId)
-        if (entry == null) {
+        val entry = gameLibrary.get(
+            java.util.UUID.fromString(gameId)
+        )
+
+        if (entry == null || entry.gameType !is GameEntry.GameType.Html) {
             finish()
             return
         }
 
-        val htmlType = entry.gameType as? GameEntry.GameType.Html
-        if (htmlType == null) {
-            finish()
-            return
-        }
+        gameEntry = entry
 
-        val startUrl = htmlType.sourceUrl ?: gameLibrary.wadPath(entry).toURI().toString()
-        val title = entry.title
+        window.decorView.systemUiVisibility =
+            View.SYSTEM_UI_FLAG_FULLSCREEN or
+            View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
+            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+            View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
+            View.SYSTEM_UI_FLAG_LAYOUT_STABLE
 
         setContent {
             MaterialTheme {
-                HtmlGameScreen(
-                    title = title,
-                    startUrl = startUrl,
-                    portraitLayoutId = entry.portraitLayout.toString(),
-                    landscapeLayoutId = entry.landscapeLayout.toString(),
-                    onEditControls = {
-                        startActivity(
-                            Intent(this, MainActivity::class.java).apply {
-                                action = MainActivity.ACTION_OPEN_LAYOUT_MANAGER
+                Box(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    HtmlWebView(
+                        entry = gameEntry,
+                        library = gameLibrary,
+                        onWebViewCreated = {
+                            webView = it
+                        }
+                    )
+
+                    if (showControls) {
+                        VirtualGamepad(
+                            // HTML currently receives keyboard-style input
+                            // through JavaScript KeyboardEvents.
+                            runner = null,
+                            enabled = true,
+                            onBindingDown = { binding ->
+                                dispatchHtmlBinding(binding, true)
+                            },
+                            onBindingUp = { binding ->
+                                dispatchHtmlBinding(binding, false)
+                            },
+                            onMenu = {
+                                showMenu = true
                             }
                         )
-                    },
-                    onExit = {
-                        finish()
                     }
-                )
+                }
+
+                if (showMenu) {
+                    HtmlGameMenu(
+                        onDismiss = {
+                            showMenu = false
+                        },
+
+                        onEditControls = {
+                            showMenu = false
+
+                            /*
+                             * The existing control-layout editor will be
+                             * connected here once the HTML runner shares the
+                             * exact same editor state as GameActivity.
+                             */
+                            startActivity(
+                                android.content.Intent(
+                                    this@HtmlGameActivity,
+                                    ControlLayoutActivity::class.java
+                                )
+                            )
+                        },
+
+                        onExit = {
+                            showMenu = false
+                            finish()
+                        }
+                    )
+                }
             }
+        }
+
+        onBackPressedDispatcher.addCallback(
+            this,
+            object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    showMenu = true
+                }
+            }
+        )
+    }
+
+    override fun onDestroy() {
+        webView?.apply {
+            stopLoading()
+            loadUrl("about:blank")
+            clearHistory()
+            removeAllViews()
+            destroy()
+        }
+
+        webView = null
+
+        super.onDestroy()
+    }
+
+    /**
+     * Sends a virtual control event to the HTML document.
+     *
+     * The event is dispatched as a normal KeyboardEvent so games that already
+     * listen for keyboard input can work without requiring game-specific
+     * JavaScript integration.
+     */
+    private fun dispatchHtmlBinding(
+        binding: net.perfectdreams.butterscotch.android.layouts.InputBinding,
+        pressed: Boolean
+    ) {
+        val keyboard = binding as? net.perfectdreams.butterscotch.android.layouts.InputBinding.Keyboard
+            ?: return
+
+        val keyData = keyboardKeyData(keyboard.vk) ?: return
+
+        val type = if (pressed) "keydown" else "keyup"
+
+        val script = """
+            (() => {
+                const event = new KeyboardEvent("$type", {
+                    key: ${org.json.JSONObject.quote(keyData.key)},
+                    code: ${org.json.JSONObject.quote(keyData.code)},
+                    keyCode: ${keyData.keyCode},
+                    which: ${keyData.keyCode},
+                    bubbles: true,
+                    cancelable: true
+                });
+
+                document.dispatchEvent(event);
+                window.dispatchEvent(event);
+
+                if (document.activeElement) {
+                    document.activeElement.dispatchEvent(event);
+                }
+            })();
+        """.trimIndent()
+
+        webView?.post {
+            webView?.evaluateJavascript(script, null)
         }
     }
 
-    companion object {
-        const val EXTRA_GAME_ID = "extra_game_id"
+    private data class KeyboardKeyData(
+        val key: String,
+        val code: String,
+        val keyCode: Int
+    )
+
+    private fun keyboardKeyData(vk: Int): KeyboardKeyData? {
+        return when (vk) {
+            37 -> KeyboardKeyData("ArrowLeft", "ArrowLeft", 37)
+            38 -> KeyboardKeyData("ArrowUp", "ArrowUp", 38)
+            39 -> KeyboardKeyData("ArrowRight", "ArrowRight", 39)
+            40 -> KeyboardKeyData("ArrowDown", "ArrowDown", 40)
+
+            13 -> KeyboardKeyData("Enter", "Enter", 13)
+            27 -> KeyboardKeyData("Escape", "Escape", 27)
+            32 -> KeyboardKeyData(" ", "Space", 32)
+
+            65 -> KeyboardKeyData("a", "KeyA", 65)
+            66 -> KeyboardKeyData("b", "KeyB", 66)
+            67 -> KeyboardKeyData("c", "KeyC", 67)
+            68 -> KeyboardKeyData("d", "KeyD", 68)
+            69 -> KeyboardKeyData("e", "KeyE", 69)
+            70 -> KeyboardKeyData("f", "KeyF", 70)
+            71 -> KeyboardKeyData("g", "KeyG", 71)
+            72 -> KeyboardKeyData("h", "KeyH", 72)
+            73 -> KeyboardKeyData("i", "KeyI", 73)
+            74 -> KeyboardKeyData("j", "KeyJ", 74)
+            75 -> KeyboardKeyData("k", "KeyK", 75)
+            76 -> KeyboardKeyData("l", "KeyL", 76)
+            77 -> KeyboardKeyData("m", "KeyM", 77)
+            78 -> KeyboardKeyData("n", "KeyN", 78)
+            79 -> KeyboardKeyData("o", "KeyO", 79)
+            80 -> KeyboardKeyData("p", "KeyP", 80)
+            81 -> KeyboardKeyData("q", "KeyQ", 81)
+            82 -> KeyboardKeyData("r", "KeyR", 82)
+            83 -> KeyboardKeyData("s", "KeyS", 83)
+            84 -> KeyboardKeyData("t", "KeyT", 84)
+            85 -> KeyboardKeyData("u", "KeyU", 85)
+            86 -> KeyboardKeyData("v", "KeyV", 86)
+            87 -> KeyboardKeyData("w", "KeyW", 87)
+            88 -> KeyboardKeyData("x", "KeyX", 88)
+            89 -> KeyboardKeyData("y", "KeyY", 89)
+            90 -> KeyboardKeyData("z", "KeyZ", 90)
+
+            else -> null
+        }
     }
 }
 
-@Composable
-private fun HtmlGameScreen(
-    title: String,
-    startUrl: String,
-    portraitLayoutId: String,
-    landscapeLayoutId: String,
+@SuppressLint("SetJavaScriptEnabled")
+@androidx.compose.runtime.Composable
+private fun HtmlWebView(
+    entry: GameEntry,
+    library: GameLibrary,
+    onWebViewCreated: (WebView) -> Unit
+) {
+    val gameType = entry.gameType as? GameEntry.GameType.Html
+        ?: return
+
+    val rootDirectory = File(gameType.rootPath)
+
+    var currentUrl by remember {
+        mutableStateOf(
+            "file://${File(rootDirectory, "index.html").absolutePath}"
+        )
+    }
+
+    AndroidView(
+        modifier = Modifier.fillMaxSize(),
+
+        factory = { context ->
+            WebView(context).apply {
+
+                onWebViewCreated(this)
+
+                settings.apply {
+                    javaScriptEnabled = true
+                    domStorageEnabled = true
+                    databaseEnabled = false
+
+                    allowFileAccess = true
+                    allowContentAccess = true
+
+                    allowFileAccessFromFileURLs = true
+                    allowUniversalAccessFromFileURLs = true
+
+                    mediaPlaybackRequiresUserGesture = false
+
+                    cacheMode = WebSettings.LOAD_DEFAULT
+
+                    builtInZoomControls = false
+                    displayZoomControls = false
+                    setSupportZoom(false)
+
+                    loadsImagesAutomatically = true
+
+                    javaScriptCanOpenWindowsAutomatically = true
+                    setGeolocationEnabled(false)
+
+                    // HTML games should behave as an application rather
+                    // than as a normal browser page.
+                    userAgentString =
+                        "$userAgentString SpaghettiHTMLRunner/1.0"
+                }
+
+                webChromeClient = WebChromeClient()
+
+                webViewClient = object : WebViewClient() {
+
+                    override fun shouldOverrideUrlLoading(
+                        view: WebView,
+                        request: WebResourceRequest
+                    ): Boolean {
+                        val uri = request.url
+
+                        /*
+                         * Keep local game resources inside the WebView.
+                         * External HTTP/HTTPS pages are also allowed because
+                         * some HTML games load libraries/assets remotely.
+                         */
+                        if (
+                            uri.scheme == "file" ||
+                            uri.scheme == "http" ||
+                            uri.scheme == "https"
+                        ) {
+                            return false
+                        }
+
+                        return true
+                    }
+
+                    override fun shouldInterceptRequest(
+                        view: WebView,
+                        request: WebResourceRequest
+                    ): WebResourceResponse? {
+                        return super.shouldInterceptRequest(
+                            view,
+                            request
+                        )
+                    }
+                }
+
+                setBackgroundColor(
+                    android.graphics.Color.BLACK
+                )
+
+                systemUiVisibility =
+                    View.SYSTEM_UI_FLAG_FULLSCREEN or
+                    View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+                    View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
+                    View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+                    View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
+                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+
+                loadUrl(currentUrl)
+            }
+        },
+
+        update = { view ->
+            if (view.url != currentUrl) {
+                view.loadUrl(currentUrl)
+            }
+        }
+    )
+
+    LaunchedEffect(rootDirectory.absolutePath) {
+        val indexFile = File(rootDirectory, "index.html")
+
+        if (indexFile.exists()) {
+            currentUrl = "file://${indexFile.absolutePath}"
+        }
+    }
+}
+
+@androidx.compose.runtime.Composable
+private fun HtmlGameMenu(
+    onDismiss: () -> Unit,
     onEditControls: () -> Unit,
     onExit: () -> Unit
 ) {
-    val context = LocalContext.current
-    val webViewState = remember { mutableStateOf<WebView?>(null) }
-    var showMenu by remember { mutableStateOf(false) }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
 
-    val normalizedStartUrl = remember(startUrl) {
-        normalizeHtmlUrl(startUrl)
-    }
+        title = {
+            androidx.compose.material3.Text("Game Menu")
+        },
 
-    BackHandler(enabled = true) {
-        val currentWebView = webViewState.value
-        if (currentWebView != null && currentWebView.canGoBack()) {
-            currentWebView.goBack()
-        } else {
-            showMenu = true
-        }
-    }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            webViewState.value?.apply {
-                stopLoading()
-                loadUrl("about:blank")
-                removeAllViews()
-                destroy()
-            }
-            webViewState.value = null
-        }
-    }
-
-    LaunchedEffect(normalizedStartUrl) {
-        webViewState.value?.loadUrl(normalizedStartUrl)
-    }
-
-    Column(
-        modifier = Modifier.fillMaxSize()
-    ) {
-        AndroidView(
-            modifier = Modifier.weight(1f),
-            factory = { ctx ->
-                WebView(ctx).apply {
-                    layoutParams = ViewGroup.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT
+        text = {
+            androidx.compose.foundation.layout.Column {
+                androidx.compose.material3.TextButton(
+                    onClick = onEditControls
+                ) {
+                    androidx.compose.material3.Text(
+                        "Edit Control Layout"
                     )
+                }
 
-                    settings.apply {
-                        javaScriptEnabled = true
-                        domStorageEnabled = true
-                        databaseEnabled = true
-                        mediaPlaybackRequiresUserGesture = false
-                        javaScriptCanOpenWindowsAutomatically = true
-                        useWideViewPort = true
-                        loadWithOverviewMode = true
-                        builtInZoomControls = false
-                        displayZoomControls = false
+                androidx.compose.material3.TextButton(
+                    onClick = onDismiss
+                ) {
+                    androidx.compose.material3.Text(
+                        "Resume Game"
+                    )
+                }
 
-                        allowFileAccess = true
-                        allowContentAccess = true
-
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-                            allowFileAccessFromFileURLs = true
-                            allowUniversalAccessFromFileURLs = true
-                        }
-
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                            mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-                        }
-                    }
-
-                    webViewClient = object : WebViewClient() {
-                        override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-                            val uri = request?.url ?: return false
-                            return shouldOverrideHtmlNavigation(uri.scheme, uri.toString(), context)
-                        }
-
-                        @Suppress("DEPRECATION")
-                        override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
-                            if (url == null) return false
-                            val scheme = runCatching { android.net.Uri.parse(url).scheme }.getOrNull()
-                            return shouldOverrideHtmlNavigation(scheme, url, context)
-                        }
-                    }
-
-                    webViewState.value = this
-                    loadUrl(normalizedStartUrl)
+                androidx.compose.material3.TextButton(
+                    onClick = onExit
+                ) {
+                    androidx.compose.material3.Text(
+                        "Exit Game"
+                    )
                 }
             }
-        )
-    }
+        },
 
-    if (showMenu) {
-        AlertDialog(
-            onDismissRequest = { showMenu = false },
-            title = { Text(title) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("HTML game")
-                    Text("Portrait layout: $portraitLayoutId")
-                    Text("Landscape layout: $landscapeLayoutId")
-
-                    Button(
-                        onClick = {
-                            showMenu = false
-                            onEditControls()
-                        }
-                    ) {
-                        Text("Edit Controls")
-                    }
-
-                    Button(
-                        onClick = {
-                            showMenu = false
-                            webViewState.value?.reload()
-                        }
-                    ) {
-                        Text("Reload")
-                    }
-
-                    Button(
-                        onClick = {
-                            showMenu = false
-                            onExit()
-                        }
-                    ) {
-                        Text("Exit Game")
-                    }
-                }
-            },
-            confirmButton = {},
-            dismissButton = {}
-        )
-    }
-}
-
-private fun shouldOverrideHtmlNavigation(
-    scheme: String?,
-    url: String,
-    context: android.content.Context
-): Boolean {
-    return when (scheme?.lowercase()) {
-        "http", "https", "file", "content" -> false
-        else -> {
-            runCatching {
-                context.startActivity(
-                    Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))
-                )
-            }
-            true
-        }
-    }
-}
-
-private fun normalizeHtmlUrl(raw: String): String {
-    val trimmed = raw.trim()
-
-    return when {
-        trimmed.startsWith("http://", ignoreCase = true) -> trimmed
-        trimmed.startsWith("https://", ignoreCase = true) -> trimmed
-        trimmed.startsWith("file://", ignoreCase = true) -> trimmed
-        trimmed.startsWith("content://", ignoreCase = true) -> trimmed
-        else -> File(trimmed).toURI().toString()
-    }
+        confirmButton = {}
+    )
 }
