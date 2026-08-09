@@ -76,6 +76,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import net.perfectdreams.butterscotch.android.GameActivity
+import net.perfectdreams.butterscotch.android.HtmlGameActivity
 import net.perfectdreams.butterscotch.android.R
 import net.perfectdreams.butterscotch.android.Route
 import net.perfectdreams.butterscotch.android.components.ButterscotchBobImage
@@ -83,15 +84,12 @@ import net.perfectdreams.butterscotch.android.components.ButterscotchTopBar
 import net.perfectdreams.butterscotch.android.components.FrameAnimationImage
 import net.perfectdreams.butterscotch.android.library.GameEntry
 import net.perfectdreams.butterscotch.android.library.GameLibrary
-import net.perfectdreams.butterscotch.android.HtmlGameActivity
 
 /**
- * The library list. Receives a [GameLibrary] from [net.perfectdreams.butterscotch.android.ButterscotchApp] — because its `entries` field
- * is a Compose snapshot list, mutations from [ImportScreen]/[SettingsScreen] reflect here
- * automatically without any lifecycle-based reload.
+ * The library list.
  *
- * Navigation is delegated upward via the three lambdas so this screen stays unaware of the nav
- * graph / Intent plumbing.
+ * GameMaker and HTML games share the same library and the same import flow,
+ * but launch through their own runtime Activity.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -105,9 +103,10 @@ fun LauncherScreen(
     val context = LocalContext.current
     var menuExpanded by remember { mutableStateOf(false) }
 
-    val _updateAvailableClickCallback = updateAvailableClickCallback
-    if (_updateAvailableClickCallback != null) {
-        LaunchedEffect(_updateAvailableClickCallback) {
+    val updateCallback = updateAvailableClickCallback
+
+    if (updateCallback != null) {
+        LaunchedEffect(updateCallback) {
             val result = snackbarHostState.showSnackbar(
                 message = "Update Available!",
                 actionLabel = "Update",
@@ -115,7 +114,7 @@ fun LauncherScreen(
             )
 
             if (result == SnackbarResult.ActionPerformed) {
-                _updateAvailableClickCallback()
+                updateCallback()
             }
         }
     }
@@ -123,13 +122,15 @@ fun LauncherScreen(
     Scaffold(
         snackbarHost = {
             SnackbarHost(hostState = snackbarHostState) { data ->
-                // Keyed by data so a new snackbar doesn't reuse the already-swiped-away state of the previous one
                 key(data) {
                     val dismissState = rememberSwipeToDismissBoxState()
+
                     SwipeToDismissBox(
                         state = dismissState,
                         backgroundContent = {},
-                        onDismiss = { data.dismiss() }
+                        onDismiss = {
+                            data.dismiss()
+                        }
                     ) {
                         Snackbar(
                             modifier = Modifier.padding(12.dp),
@@ -138,14 +139,21 @@ fun LauncherScreen(
                             actionContentColor = MaterialTheme.colorScheme.primary,
                             action = {
                                 val actionLabel = data.visuals.actionLabel
+
                                 if (actionLabel != null) {
-                                    TextButton(onClick = { data.performAction() }) {
+                                    TextButton(
+                                        onClick = {
+                                            data.performAction()
+                                        }
+                                    ) {
                                         Text(actionLabel)
                                     }
                                 }
                             }
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                                 FrameAnimationImage(
                                     listOf(
                                         R.drawable.update_1,
@@ -158,7 +166,9 @@ fun LauncherScreen(
                                     3
                                 )
 
-                                Spacer(Modifier.width(8.dp))
+                                Spacer(
+                                    Modifier.width(8.dp)
+                                )
 
                                 Text(data.visuals.message)
                             }
@@ -173,9 +183,15 @@ fun LauncherScreen(
                 title = {
                     Text("Spaghetti")
                 },
+
                 nav = nav,
+
                 actions = {
-                    IconButton(onClick = { menuExpanded = true }) {
+                    IconButton(
+                        onClick = {
+                            menuExpanded = true
+                        }
+                    ) {
                         Icon(
                             Icons.Filled.MoreVert,
                             contentDescription = "More options",
@@ -185,7 +201,9 @@ fun LauncherScreen(
 
                     DropdownMenu(
                         expanded = menuExpanded,
-                        onDismissRequest = { menuExpanded = false },
+                        onDismissRequest = {
+                            menuExpanded = false
+                        }
                     ) {
                         DropdownMenuItem(
                             leadingIcon = {
@@ -194,13 +212,15 @@ fun LauncherScreen(
                                     contentDescription = null
                                 )
                             },
+
                             text = {
                                 Text("Settings")
                             },
+
                             onClick = {
                                 menuExpanded = false
                                 nav.navigate(Route.GeneralSettings)
-                            },
+                            }
                         )
 
                         DropdownMenuItem(
@@ -210,16 +230,18 @@ fun LauncherScreen(
                                     contentDescription = null
                                 )
                             },
+
                             text = {
                                 Text("About")
                             },
+
                             onClick = {
                                 menuExpanded = false
                                 nav.navigate(Route.About)
-                            },
+                            }
                         )
                     }
-                },
+                }
             )
         },
 
@@ -228,24 +250,24 @@ fun LauncherScreen(
                 text = {
                     Text("Add Game")
                 },
+
                 icon = {
                     Icon(
                         Icons.Filled.Add,
                         contentDescription = null
                     )
                 },
+
                 onClick = {
                     nav.navigate(Route.ImportGame)
-                },
+                }
             )
         }
-
     ) { innerPadding ->
 
         val entries = library.entries
 
         if (entries.isEmpty()) {
-
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -255,9 +277,8 @@ fun LauncherScreen(
 
                 verticalArrangement = Arrangement.Center,
 
-                horizontalAlignment = Alignment.CenterHorizontally,
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-
                 ButterscotchBobImage(
                     R.drawable.butterscotch_logo,
                     "Butterscotch logo"
@@ -269,7 +290,9 @@ fun LauncherScreen(
                     textAlign = TextAlign.Center
                 )
 
-                Spacer(Modifier.height(24.dp))
+                Spacer(
+                    Modifier.height(24.dp)
+                )
 
                 Text(
                     "Tap \"Add Game\" to add a game to your library.",
@@ -277,7 +300,9 @@ fun LauncherScreen(
                     textAlign = TextAlign.Center
                 )
 
-                Spacer(Modifier.height(16.dp))
+                Spacer(
+                    Modifier.height(16.dp)
+                )
 
                 Text(
                     "Have fun! ʕ•ᴥ•ʔ",
@@ -285,9 +310,7 @@ fun LauncherScreen(
                     textAlign = TextAlign.Center
                 )
             }
-
         } else {
-
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
@@ -295,27 +318,25 @@ fun LauncherScreen(
 
                 contentPadding = PaddingValues(16.dp),
 
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-
-                // The entries are already sorted here
                 itemsIndexed(
                     entries,
                     key = { _, entry ->
                         entry.id.toString()
                     }
-                ) { index, entry ->
+                ) { _, entry ->
 
                     Column(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-
                         GameTile(
                             library = library,
                             entry = entry,
 
                             onLaunch = {
-                                when (val gameType = entry.gameType) {
+                                when (entry.gameType) {
+
                                     is GameEntry.GameType.GameMakerStudio -> {
                                         context.startActivity(
                                             Intent(
@@ -323,44 +344,28 @@ fun LauncherScreen(
                                                 GameActivity::class.java
                                             ).apply {
                                                 putExtra(
-                                                    GameActivity.Companion.EXTRA_GAME_ID,
+                                                    GameActivity.EXTRA_GAME_ID,
                                                     entry.id.toString()
                                                 )
                                             }
                                         )
                                     }
 
-        is GameEntry.GameType.Html -> {
-            context.startActivity(
-                Intent(
-                    context,
-                    HtmlGameActivity::class.java
-                ).apply {
-                    putExtra(
-                        HtmlGameActivity.EXTRA_GAME_ID,
-                        entry.id.toString()
-                    )
-                }
-            )
-        }
-    }
-}
-                                    
-        is GameEntry.GameType.Html -> {
-            context.startActivity(
-                Intent(
-                    context,
-                    HtmlGameActivity::class.java
-                ).apply {
-                    putExtra(
-                        HtmlGameActivity.EXTRA_GAME_ID,
-                        entry.id.toString()
-                    )
-                }
-            )
-        }
-    }
-                            }
+                                    is GameEntry.GameType.Html -> {
+                                        context.startActivity(
+                                            Intent(
+                                                context,
+                                                HtmlGameActivity::class.java
+                                            ).apply {
+                                                putExtra(
+                                                    HtmlGameActivity.EXTRA_GAME_ID,
+                                                    entry.id.toString()
+                                                )
+                                            }
+                                        )
+                                    }
+                                }
+                            },
 
                             onOpenSettings = {
                                 nav.navigate(
@@ -368,7 +373,7 @@ fun LauncherScreen(
                                         entry.id.toString()
                                     )
                                 )
-                            },
+                            }
                         )
                     }
                 }
@@ -377,43 +382,38 @@ fun LauncherScreen(
     }
 }
 
-
 @Composable
 private fun GameTile(
     library: GameLibrary,
     entry: GameEntry,
     onLaunch: () -> Unit,
-    onOpenSettings: () -> Unit,
+    onOpenSettings: () -> Unit
 ) {
     val context = LocalContext.current
 
     Card(
         modifier = Modifier.fillMaxWidth()
     ) {
-
         Row(
             verticalAlignment = Alignment.CenterVertically
         ) {
-
             Row(
                 modifier = Modifier
                     .weight(1f)
                     .clickable(onClick = onLaunch)
                     .padding(16.dp),
 
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-
                 GameIcon(
-                    library,
-                    entry,
+                    library = library,
+                    entry = entry,
                     modifier = Modifier.size(42.dp)
                 )
 
                 Column(
                     modifier = Modifier.padding(start = 12.dp)
                 ) {
-
                     Text(
                         entry.title,
                         style = MaterialTheme.typography.titleMedium.copy(
@@ -425,6 +425,7 @@ private fun GameTile(
                         when (val gameType = entry.gameType) {
                             is GameEntry.GameType.GameMakerStudio ->
                                 "GM:S (WAD Version ${gameType.wadVersion})"
+
                             is GameEntry.GameType.Html ->
                                 "HTML"
                         }
@@ -432,68 +433,53 @@ private fun GameTile(
                 }
             }
 
-            // The IconButtons has its own click region, so tapping them doesn't bubble into the launch click above.
-
             IconButton(
-                onClick = onOpenSettings
+                onClick = {
+                    if (entry.favorited) {
+                        library.update(entry.id) {
+                            it.copy(favorited = false)
+                        }
+
+                        library.save()
+
+                        Toast.makeText(
+                            context,
+                            "Unfavorited game!",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    } else {
+                        library.update(entry.id) {
+                            it.copy(favorited = true)
+                        }
+
+                        library.save()
+
+                        Toast.makeText(
+                            context,
+                            "Favorited game!",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
             ) {
-
                 if (entry.favorited) {
-
-                    IconButton(
-                        onClick = {
-                            library.update(entry.id) {
-                                it.copy(favorited = false)
-                            }
-
-                            library.save()
-
-                            Toast.makeText(
-                                context,
-                                "Unfavorited game!",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
-                    ) {
-
-                        Icon(
-                            Icons.Filled.Star,
-                            contentDescription = "Unfavorite Game",
-                            tint = Color(0xFFFEB529)
-                        )
-                    }
-
+                    Icon(
+                        Icons.Filled.Star,
+                        contentDescription = "Unfavorite Game",
+                        tint = Color(0xFFFEB529)
+                    )
                 } else {
-
-                    IconButton(
-                        onClick = {
-                            library.update(entry.id) {
-                                it.copy(favorited = true)
-                            }
-
-                            library.save()
-
-                            Toast.makeText(
-                                context,
-                                "Favorited game!",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
-                    ) {
-
-                        Icon(
-                            Icons.Filled.StarBorder,
-                            contentDescription = "Favorite Game",
-                            tint = Color(0xFFFEB529)
-                        )
-                    }
+                    Icon(
+                        Icons.Filled.StarBorder,
+                        contentDescription = "Favorite Game",
+                        tint = Color(0xFFFEB529)
+                    )
                 }
             }
 
             IconButton(
                 onClick = onOpenSettings
             ) {
-
                 Icon(
                     Icons.Filled.Settings,
                     contentDescription = "Game settings"
@@ -503,19 +489,11 @@ private fun GameTile(
     }
 }
 
-
-/**
- * Shows the per-game icon scraped from the bundle's first .exe at import time, or the Butterscotch
- * app icon when no icon was extractable (no .exe / PE without resources / decode failed).
- *
- * The icons are tiny (<=256px) so we decode synchronously inside a `remember`; that's plenty fast
- * for a list of a few dozen entries and avoids pulling in an image-loading dependency.
- */
 @Composable
 private fun GameIcon(
     library: GameLibrary,
     entry: GameEntry,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
 
@@ -536,17 +514,17 @@ private fun GameIcon(
             bitmap.asImageBitmap(),
             filterQuality = FilterQuality.None
         ),
+
         contentDescription = null,
+
         contentScale = ContentScale.Fit,
-        modifier = modifier,
+
+        modifier = modifier
     )
 }
 
-
 /**
- * Loads the app's launcher icon as a bitmap. We can't use `painterResource(R.mipmap.ic_launcher)`
- * because on API 26+ that resolves to an `<adaptive-icon>` XML, which Compose's painterResource
- * refuses to load.
+ * Loads the app launcher icon as a bitmap.
  */
 private fun appIconBitmap(context: Context): Bitmap {
     val drawable = context.packageManager.getApplicationIcon(
