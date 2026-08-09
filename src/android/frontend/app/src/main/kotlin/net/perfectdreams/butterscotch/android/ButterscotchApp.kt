@@ -27,12 +27,18 @@ import java.util.UUID
  * The entry point of the app!
  */
 @Composable
-fun ButterscotchApp(gameLibrary: GameLibrary, layoutLibrary: LayoutLibrary, settingsStore: SettingsStore, updateAvailableClickCallback: (() -> (Unit))?) {
+fun ButterscotchApp(
+    gameLibrary: GameLibrary,
+    layoutLibrary: LayoutLibrary,
+    settingsStore: SettingsStore,
+    updateAvailableClickCallback: (() -> (Unit))?,
+    startRoute: Route = Route.Launcher
+) {
     val nav = rememberNavController()
 
     NavHost(
         navController = nav,
-        startDestination = Route.Launcher,
+        startDestination = startRoute,
         // Changes the default fade to a horizontal right -> left slide animation
         enterTransition = { slideIntoContainer(SlideDirection.Start, tween(250)) },
         exitTransition = { slideOutOfContainer(SlideDirection.Start, tween(250)) },
