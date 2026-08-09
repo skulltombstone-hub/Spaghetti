@@ -1,7 +1,7 @@
 # Spaghetti
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/skulltombstone-hub/Spaghetti/refs/heads/main/app/src/main/res/drawable/butterscotch_logo.png" width="128" />
+  <img src="[https://raw.githubusercontent.com/skulltombstone-hub/Spaghetti/refs/heads/main/app/src/main/res/drawable/butterscotch_logo.pn](https://raw.githubusercontent.com/skulltombstone-hub/Spaghetti/refs/heads/android-ci/src/android/frontend/app/src/main/res/drawable/butterscotch_logo.png)" width="128" />
 </p>
 
 <p align="center">
