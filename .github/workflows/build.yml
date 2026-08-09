@@ -58,9 +58,13 @@ jobs:
             -Pandroid.injected.signing.key.password="$ANDROID_KEY_PASSWORD" \
             --stacktrace
 
+      # O AAB só é publicado como artifact em builds da main
+      # ou em execuções manuais do workflow.
       - name: Upload signed AAB
+        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
         with:
           name: butterscotch-android-release
           path: src/android/frontend/app/build/outputs/bundle/release/app-release.aab
           if-no-files-found: error
+          retention-days: 1
