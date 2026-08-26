@@ -4,66 +4,104 @@ import android.util.Log
 import net.perfectdreams.butterscotch.android.library.GameEntry
 
 /**
- * Central registry for all installed runtimes.
+ * Central registry for every runnable engine/runtime supported by Spaghetti.
  *
- * In version 2.0 this is the place where we will register:
- * - GameMaker / Butterscotch
- * - HTML / WebView
- * - Flash / Ruffle
- * - Love2D
- * - Console runtimes
- *
- * The registry keeps the launcher logic small and predictable.
+ * The launcher never needs to know which Activity belongs to a GameType.
+ * It resolves the GameType to an EngineRuntime and asks that runtime for
+ * the appropriate launch Intent.
  */
 object EngineRuntimeRegistry {
-    private const val TAG = "EngineRuntimeRegistry"
 
-    private val runtimes: MutableList<EngineRuntime> = mutableListOf()
+    private const val TAG =
+        "EngineRuntimeRegistry"
+
+    private val runtimes:
+        MutableList<EngineRuntime> =
+        mutableListOf()
 
     @Volatile
-    private var initialized = false
+    private var initialized =
+        false
 
     /**
-     * Register a runtime. Safe to call multiple times, duplicates are ignored
-     * by runtimeId.
+     * Registers a runtime once.
+     *
+     * Runtime IDs are stable and therefore act as the unique key.
      */
     @Synchronized
-    fun register(runtime: EngineRuntime) {
-        if (runtimes.any { it.runtimeId == runtime.runtimeId }) {
+    fun register(
+        runtime: EngineRuntime
+    ) {
+        if (
+            runtimes.any {
+                it.runtimeId ==
+                    runtime.runtimeId
+            }
+        ) {
             return
         }
 
         runtimes += runtime
-        Log.d(TAG, "Registered runtime ${runtime.runtimeId} (${runtime.displayName})")
+
+        Log.d(
+            TAG,
+            "Registered runtime " +
+                "${runtime.runtimeId} " +
+                "(${runtime.displayName})"
+        )
     }
 
     /**
-     * Register the built-in runtimes once.
+     * Registers all runtimes that are actually implemented
+     * at the current stage of the Android project.
      *
-     * This should be called from Application.onCreate() or the launcher entrypoint.
+     * New console runtimes should be added here only after their
+     * Runtime + Activity pair has actually been implemented.
      */
     @Synchronized
     fun ensureInitialized() {
-        if (initialized) return
+        if (initialized) {
+            return
+        }
+
         initialized = true
 
-        register(GameMakerRuntime)
-        register(HtmlRuntime)
+        register(
+            GameMakerRuntime
+        )
+
+        register(
+            HtmlRuntime
+        )
+
+        register(
+            Love2DRuntime
+        )
+
+        register(
+            FlashRuntime
+        )
     }
 
     /**
-     * Finds the runtime that supports the given game type.
+     * Finds the runtime capable of executing a given GameType.
      */
-    fun resolve(gameType: GameEntry.GameType): EngineRuntime? {
+    fun resolve(
+        gameType: GameEntry.GameType
+    ): EngineRuntime? {
         ensureInitialized()
-        return runtimes.firstOrNull { it.supports(gameType) }
+
+        return runtimes.firstOrNull {
+            it.supports(gameType)
+        }
     }
 
     /**
-     * Returns all runtimes currently registered.
+     * Returns an immutable snapshot of the current registry.
      */
     fun all(): List<EngineRuntime> {
         ensureInitialized()
+
         return runtimes.toList()
     }
 }
