@@ -1,43 +1,52 @@
 package net.perfectdreams.butterscotch.android
 
 import android.annotation.SuppressLint
-import android.content.res.Configuration
 import android.graphics.Color as AndroidColor
+import android.net.Uri
 import android.os.Bundle
+import android.util.Log
+import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager
 import android.webkit.ConsoleMessage
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import kotlinx.coroutines.delay
 import net.perfectdreams.butterscotch.android.library.GameEntry
 import net.perfectdreams.butterscotch.android.library.GameLibrary
 import net.perfectdreams.butterscotch.android.theme.ButterscotchAndroidTheme
 import java.io.File
+import java.net.URLDecoder
+import java.nio.charset.StandardCharsets
 import java.util.UUID
 
 /**
- * Activity responsible for running imported Flash games.
+ * Activity dedicated exclusively to Adobe Flash / Ruffle games.
  *
  * Architecture:
  *
@@ -45,14 +54,22 @@ import java.util.UUID
  *       |
  *       +-- WebView
  *              |
- *              +-- Ruffle Web Runtime
- *                        |
- *                        +-- imported .swf
+ *              +-- virtual local HTTP origin
+ *                       |
+ *                       +-- /ruffle/*
+ *                       |      |
+ *                       |      +-- ruffle.js
+ *                       |      +-- core*.js
+ *                       |      +-- *.wasm
+ *                       |
+ *                       +-- /games/*
+ *                              |
+ *                              +-- imported .swf
  *
- * The Activity is deliberately separate from HtmlGameActivity.
+ * The Ruffle self-hosted package is kept completely intact.
+ * We do not rename, merge or select its WASM files manually.
  *
- * HTML games are executed by HtmlGameActivity directly.
- * Flash games are executed by Ruffle through this dedicated Activity.
+ * The WebView simply exposes the package through one coherent origin.
  */
 class FlashGameActivity : ComponentActivity() {
 
@@ -62,18 +79,20 @@ class FlashGameActivity : ComponentActivity() {
         private const val TAG = "FlashGameActivity"
 
         /**
-         * Directory inside app/src/main/assets containing the
-         * self-hosted Ruffle web package.
+         * Synthetic origin used exclusively by this WebView.
          *
-         * Expected files include at least:
-         *
-         * assets/ruffle/ruffle.js
-         * assets/ruffle/*.wasm
+         * Nothing is actually served by an HTTP server. All requests to this
+         * origin are intercepted by FlashWebView and resolved directly from
+         * APK assets or the app's private game directory.
          */
-        private const val RUFFLE_ASSET_DIRECTORY = "ruffle"
+        private const val INTERNAL_HOST = "spaghetti.local"
+        private const val INTERNAL_BASE_URL = "http://$INTERNAL_HOST/"
 
-        private const val RUFFLE_SCRIPT =
-            "ruffle/ruffle.js"
+        private const val RUFFLE_URL =
+            "${INTERNAL_BASE_URL}ruffle/"
+
+        private const val GAMES_URL =
+            "${INTERNAL_BASE_URL}games/"
     }
 
     private var webView: WebView? = null
@@ -101,6 +120,7 @@ class FlashGameActivity : ComponentActivity() {
             }
 
         if (gameId == null) {
+            Log.e(TAG, "Missing or invalid game_id")
             finish()
             return
         }
@@ -111,6 +131,26 @@ class FlashGameActivity : ComponentActivity() {
             entry == null ||
             entry.gameType !is GameEntry.GameType.Flash
         ) {
+            Log.e(TAG, "Game $gameId is missing or is not a Flash game")
+            finish()
+            return
+        }
+
+        val gameType =
+            entry.gameType as GameEntry.GameType.Flash
+
+        val gameFile =
+            File(
+                gameLibrary.bundleDir(entry),
+                gameType.filename
+            )
+
+        if (!gameFile.exists() || !gameFile.isFile) {
+            Log.e(
+                TAG,
+                "Flash game file does not exist: ${gameFile.absolutePath}"
+            )
+
             finish()
             return
         }
@@ -118,31 +158,17 @@ class FlashGameActivity : ComponentActivity() {
         setContent {
             ButterscotchAndroidTheme {
                 FlashGameContent(
-                    entry = entry,
-                    library = gameLibrary,
+                    gameFile = gameFile,
+                    gameBundleDirectory = gameLibrary.bundleDir(entry),
                     onWebViewCreated = { view ->
                         webView = view
                     },
-                    onKeyDown = { keyCode ->
-                        webView?.let { view ->
-                            pressedKeys.press(
-                                view,
-                                keyCode
-                            )
-                        }
+                    onLoadError = { message ->
+                        Log.e(TAG, message)
                     },
-                    onKeyUp = { keyCode ->
-                        webView?.let { view ->
-                            pressedKeys.release(
-                                view,
-                                keyCode
-                            )
-                        }
-                    },
-                    onReleaseAllKeys = {
-                        webView?.let {
-                            pressedKeys.releaseAll(it)
-                        } ?: pressedKeys.clear()
+                    onExit = {
+                        pressedKeys.releaseAll(webView)
+                        finish()
                     }
                 )
             }
@@ -150,31 +176,32 @@ class FlashGameActivity : ComponentActivity() {
     }
 
     override fun dispatchKeyEvent(
-        event: android.view.KeyEvent
+        event: KeyEvent
     ): Boolean {
-        if (
-            event.keyCode ==
-            android.view.KeyEvent.KEYCODE_BACK
-        ) {
+
+        if (event.keyCode == KeyEvent.KEYCODE_BACK) {
             return super.dispatchKeyEvent(event)
         }
 
+        val view = webView
+            ?: return super.dispatchKeyEvent(event)
+
         when (event.action) {
-            android.view.KeyEvent.ACTION_DOWN -> {
-                if (event.repeatCount == 0) {
-                    pressedKeys.press(
-                        webView,
-                        event.keyCode
-                    )
-                }
+
+            KeyEvent.ACTION_DOWN -> {
+                pressedKeys.press(
+                    webView = view,
+                    keyCode = event.keyCode,
+                    repeat = event.repeatCount > 0
+                )
 
                 return true
             }
 
-            android.view.KeyEvent.ACTION_UP -> {
+            KeyEvent.ACTION_UP -> {
                 pressedKeys.release(
-                    webView,
-                    event.keyCode
+                    webView = view,
+                    keyCode = event.keyCode
                 )
 
                 return true
@@ -238,131 +265,30 @@ class FlashGameActivity : ComponentActivity() {
 }
 
 /**
- * JavaScript keyboard bridge for Flash/Ruffle.
- *
- * Ruffle runs inside a WebView, so Android key events have to be
- * translated into browser KeyboardEvent objects.
- */
-private class FlashKeyState {
-
-    private val pressedKeys =
-        mutableSetOf<Int>()
-
-    fun press(
-        webView: WebView?,
-        keyCode: Int
-    ) {
-        if (webView == null) return
-
-        if (!pressedKeys.add(keyCode)) {
-            return
-        }
-
-        val jsKey =
-            androidKeyCodeToJavascriptKey(keyCode)
-
-        val jsCode =
-            androidKeyCodeToJavascriptCode(keyCode)
-
-        webView.evaluateJavascript(
-            createKeyboardEventScript(
-                type = "keydown",
-                key = jsKey,
-                code = jsCode,
-                repeat = false
-            ),
-            null
-        )
-    }
-
-    fun release(
-        webView: WebView?,
-        keyCode: Int
-    ) {
-        if (webView == null) {
-            pressedKeys.remove(keyCode)
-            return
-        }
-
-        if (!pressedKeys.remove(keyCode)) {
-            return
-        }
-
-        val jsKey =
-            androidKeyCodeToJavascriptKey(keyCode)
-
-        val jsCode =
-            androidKeyCodeToJavascriptCode(keyCode)
-
-        webView.evaluateJavascript(
-            createKeyboardEventScript(
-                type = "keyup",
-                key = jsKey,
-                code = jsCode,
-                repeat = false
-            ),
-            null
-        )
-    }
-
-    fun releaseAll(
-        webView: WebView?
-    ) {
-        if (webView == null) {
-            clear()
-            return
-        }
-
-        val keys = pressedKeys.toList()
-
-        for (keyCode in keys) {
-            release(webView, keyCode)
-        }
-    }
-
-    fun clear() {
-        pressedKeys.clear()
-    }
-}
-
-/**
  * Compose host for the Flash WebView.
  */
 @Composable
 private fun FlashGameContent(
-    entry: GameEntry,
-    library: GameLibrary,
+    gameFile: File,
+    gameBundleDirectory: File,
     onWebViewCreated: (WebView) -> Unit,
-    onKeyDown: (Int) -> Unit,
-    onKeyUp: (Int) -> Unit,
-    onReleaseAllKeys: () -> Unit
+    onLoadError: (String) -> Unit,
+    onExit: () -> Unit
 ) {
-    val gameType =
-        entry.gameType as? GameEntry.GameType.Flash
-            ?: return
-
-    val gameFile =
-        File(
-            library.bundleDir(entry),
-            gameType.filename
-        )
-
-    var loadError by remember {
+    var loadError by remember(
+        gameFile.absolutePath
+    ) {
         mutableStateOf<String?>(null)
-    }
-
-    LaunchedEffect(Unit) {
-        onReleaseAllKeys()
     }
 
     DisposableEffect(Unit) {
         onDispose {
-            onReleaseAllKeys()
+            // The Activity owns actual WebView destruction.
         }
     }
 
     BackHandler {
-        onReleaseAllKeys()
+        onExit()
     }
 
     Box(
@@ -372,24 +298,46 @@ private fun FlashGameContent(
     ) {
         FlashWebView(
             gameFile = gameFile,
+            gameBundleDirectory = gameBundleDirectory,
             onWebViewCreated = onWebViewCreated,
             onLoadError = {
                 loadError = it
+                onLoadError(it)
             }
         )
+
+        if (loadError != null) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Ruffle failed to load the Flash game.",
+                    color = Color.White,
+                    style = MaterialTheme.typography.titleMedium
+                )
+
+                Text(
+                    text = loadError ?: "Unknown error",
+                    color = Color.LightGray,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(top = 12.dp)
+                )
+            }
+        }
     }
 }
 
 /**
- * WebView hosting Ruffle.
- *
- * Ruffle is loaded from app assets so Flash games remain usable
- * without requiring an external Ruffle server.
+ * WebView that hosts Ruffle.
  */
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 private fun FlashWebView(
     gameFile: File,
+    gameBundleDirectory: File,
     onWebViewCreated: (WebView) -> Unit,
     onLoadError: (String) -> Unit
 ) {
@@ -406,6 +354,10 @@ private fun FlashWebView(
                     AndroidColor.BLACK
                 )
 
+                isFocusable = true
+                isFocusableInTouchMode = true
+                requestFocus()
+
                 settings.apply {
                     javaScriptEnabled = true
 
@@ -413,13 +365,17 @@ private fun FlashWebView(
 
                     databaseEnabled = true
 
-                    allowFileAccess = true
+                    /**
+                     * We intentionally do not use file:// URLs.
+                     *
+                     * Ruffle and the imported game are exposed through the
+                     * synthetic internal origin handled below.
+                     */
+                    allowFileAccess = false
+                    allowContentAccess = false
 
-                    allowContentAccess = true
-
-                    allowFileAccessFromFileURLs = true
-
-                    allowUniversalAccessFromFileURLs = true
+                    allowFileAccessFromFileURLs = false
+                    allowUniversalAccessFromFileURLs = false
 
                     javaScriptCanOpenWindowsAutomatically =
                         true
@@ -429,19 +385,17 @@ private fun FlashWebView(
 
                     useWideViewPort = true
 
-                    loadWithOverviewMode = true
+                    loadWithOverviewMode = false
 
                     builtInZoomControls = false
-
                     displayZoomControls = false
-
                     setSupportZoom(false)
 
                     cacheMode =
                         WebSettings.LOAD_DEFAULT
 
                     userAgentString =
-                        "$userAgentString SpaghettiFlashRunner/1.0"
+                        "$userAgentString SpaghettiFlashRunner/2.0"
                 }
 
                 webChromeClient =
@@ -450,10 +404,11 @@ private fun FlashWebView(
                         override fun onConsoleMessage(
                             consoleMessage: ConsoleMessage
                         ): Boolean {
-                            android.util.Log.d(
+                            Log.d(
                                 "Ruffle",
                                 "${consoleMessage.message()} " +
-                                    "(${consoleMessage.sourceId()}:${consoleMessage.lineNumber()})"
+                                    "(${consoleMessage.sourceId()}:" +
+                                    "${consoleMessage.lineNumber()})"
                             )
 
                             return true
@@ -462,6 +417,57 @@ private fun FlashWebView(
 
                 webViewClient =
                     object : WebViewClient() {
+
+                        override fun shouldInterceptRequest(
+                            view: WebView,
+                            request: WebResourceRequest
+                        ): WebResourceResponse? {
+                            val url =
+                                request.url
+
+                            if (
+                                !url.host.equals(
+                                    INTERNAL_HOST,
+                                    ignoreCase = true
+                                )
+                            ) {
+                                return super.shouldInterceptRequest(
+                                    view,
+                                    request
+                                )
+                            }
+
+                            return interceptInternalRequest(
+                                context = context,
+                                request = request,
+                                gameBundleDirectory = gameBundleDirectory
+                            )
+                        }
+
+                        override fun shouldOverrideUrlLoading(
+                            view: WebView,
+                            request: WebResourceRequest
+                        ): Boolean {
+                            /**
+                             * Internal Ruffle/game URLs are allowed to load.
+                             */
+                            if (
+                                request.url.host.equals(
+                                    INTERNAL_HOST,
+                                    ignoreCase = true
+                                )
+                            ) {
+                                return false
+                            }
+
+                            /**
+                             * Do not let a Flash game replace the whole
+                             * launcher Activity with an arbitrary location.
+                             *
+                             * Ruffle itself handles Flash URL operations.
+                             */
+                            return true
+                        }
 
                         override fun onPageFinished(
                             view: WebView,
@@ -477,25 +483,10 @@ private fun FlashWebView(
                             )
                         }
 
-                        override fun shouldOverrideUrlLoading(
-                            view: WebView,
-                            request: WebResourceRequest
-                        ): Boolean {
-                            return when (
-                                request.url.scheme?.lowercase()
-                            ) {
-                                "file",
-                                "http",
-                                "https" -> false
-
-                                else -> true
-                            }
-                        }
-
                         override fun onReceivedError(
                             view: WebView,
                             request: WebResourceRequest,
-                            error: android.webkit.WebResourceError
+                            error: WebResourceError
                         ) {
                             super.onReceivedError(
                                 view,
@@ -520,19 +511,8 @@ private fun FlashWebView(
                         View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
                         View.SYSTEM_UI_FLAG_LAYOUT_STABLE
 
-                if (!gameFile.exists()) {
-                    onLoadError(
-                        "Flash game file does not exist: " +
-                            gameFile.absolutePath
-                    )
-
-                    return@apply
-                }
-
                 loadDataWithBaseURL(
-                    gameFile.parentFile
-                        ?.toURI()
-                        ?.toString(),
+                    INTERNAL_BASE_URL,
                     createRuffleHtml(
                         gameFile.name
                     ),
@@ -546,214 +526,178 @@ private fun FlashWebView(
 }
 
 /**
- * Generates the minimal host page used to boot Ruffle.
+ * Intercepts the synthetic local web origin.
  *
- * The actual SWF is still stored in the game's private bundle.
+ * /ruffle/* -> APK assets/ruffle/*
+ * /games/*  -> private imported game bundle
  */
-private fun createRuffleHtml(
-    swfFileName: String
-): String {
-    val escapedSwf =
-        swfFileName
-            .replace("\\", "\\\\")
-            .replace("'", "\\'")
+private fun interceptInternalRequest(
+    context: android.content.Context,
+    request: WebResourceRequest,
+    gameBundleDirectory: File
+): WebResourceResponse {
+    val path =
+        request.url.path ?: "/"
 
-    return """
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta
-                name="viewport"
-                content="width=device-width,
-                         initial-scale=1.0,
-                         maximum-scale=1.0,
-                         user-scalable=no,
-                         viewport-fit=cover"
-            >
+    return when {
 
-            <meta
-                charset="utf-8"
-            >
+        path.startsWith("/ruffle/") -> {
+            serveRuffleAsset(
+                context = context,
+                path = path
+            )
+        }
 
-            <style>
-                html,
-                body {
-                    margin: 0;
-                    padding: 0;
-                    width: 100%;
-                    height: 100%;
-                    overflow: hidden;
-                    background: #000;
-                }
+        path.startsWith("/games/") -> {
+            serveGameFile(
+                rootDirectory = gameBundleDirectory,
+                path = path.removePrefix("/games/")
+            )
+        }
 
-                #ruffle-container {
-                    position: fixed;
-                    inset: 0;
-                    width: 100%;
-                    height: 100%;
-                    overflow: hidden;
-                    background: #000;
-                }
-
-                ruffle-player {
-                    display: block;
-                    width: 100%;
-                    height: 100%;
-                }
-            </style>
-
-            <script>
-                window.RufflePlayer =
-                    window.RufflePlayer || {};
-
-                window.addEventListener(
-                    "DOMContentLoaded",
-                    function () {
-
-                        const factory =
-                            window.RufflePlayer.newest();
-
-                        if (!factory) {
-                            console.error(
-                                "RufflePlayer.newest() is unavailable."
-                            );
-                            return;
-                        }
-
-                        const player =
-                            factory.createPlayer();
-
-                        player.style.width =
-                            "100%";
-
-                        player.style.height =
-                            "100%";
-
-                        const container =
-                            document.getElementById(
-                                "ruffle-container"
-                            );
-
-                        container.appendChild(
-                            player
-                        );
-
-                        const ruffle =
-                            player.ruffle();
-
-                        ruffle.load(
-                            "${escapedSwf}"
-                        );
-                    }
-                );
-            </script>
-
-            <script
-                src="file:///android_asset/ruffle/ruffle.js">
-            </script>
-        </head>
-
-        <body>
-            <div id="ruffle-container"></div>
-        </body>
-        </html>
-    """.trimIndent()
+        else -> {
+            textResponse(
+                statusCode = 404,
+                reason = "Not Found",
+                text = "Unknown Spaghetti internal resource."
+            )
+        }
+    }
 }
 
 /**
- * Keeps the Ruffle player correctly sized on Android.
+ * Serves one file from the APK's assets/ruffle directory.
  */
-private fun injectFlashViewportFixes(
-    webView: WebView
-) {
-    webView.evaluateJavascript(
-        """
-        (() => {
-            const html =
-                document.documentElement;
-
-            const body =
-                document.body;
-
-            if (html) {
-                html.style.width = "100%";
-                html.style.height = "100%";
-                html.style.margin = "0";
-                html.style.padding = "0";
-                html.style.overflow = "hidden";
+private fun serveRuffleAsset(
+    context: android.content.Context,
+    path: String
+): WebResourceResponse {
+    val relative =
+        path
+            .removePrefix("/ruffle/")
+            .let {
+                URLDecoder.decode(
+                    it,
+                    StandardCharsets.UTF_8.name()
+                )
             }
 
-            if (body) {
-                body.style.width = "100%";
-                body.style.height = "100%";
-                body.style.margin = "0";
-                body.style.padding = "0";
-                body.style.overflow = "hidden";
-            }
-        })();
-        """.trimIndent(),
-        null
-    )
+    if (
+        relative.isBlank() ||
+        relative.contains("..") ||
+        relative.startsWith("/") ||
+        relative.contains("\\")
+    ) {
+        return textResponse(
+            statusCode = 403,
+            reason = "Forbidden",
+            text = "Invalid Ruffle asset path."
+        )
+    }
+
+    val assetPath =
+        "ruffle/$relative"
+
+    return runCatching {
+        val input =
+            context.assets.open(assetPath)
+
+        binaryResponse(
+            mimeType = mimeTypeFor(relative),
+            input = input
+        )
+    }.getOrElse { error ->
+
+        Log.e(
+            "Ruffle",
+            "Failed to open asset $assetPath",
+            error
+        )
+
+        textResponse(
+            statusCode = 404,
+            reason = "Not Found",
+            text = "Ruffle asset not found: $relative"
+        )
+    }
 }
 
 /**
- * Creates a browser KeyboardEvent inside the Ruffle/WebView document.
+ * Serves a file from the imported game's private bundle.
+ *
+ * Canonical-path validation prevents ../ traversal.
  */
-private fun createKeyboardEventScript(
-    type: String,
-    key: String,
-    code: String,
-    repeat: Boolean
-): String {
-    val safeType =
-        type.replace("'", "\\'")
+private fun serveGameFile(
+    rootDirectory: File,
+    path: String
+): WebResourceResponse {
 
-    val safeKey =
-        key.replace("'", "\\'")
+    val relative =
+        URLDecoder.decode(
+            path,
+            StandardCharsets.UTF_8.name()
+        )
 
-    val safeCode =
-        code.replace("'", "\\'")
+    if (
+        relative.isBlank() ||
+        relative.startsWith("/") ||
+        relative.contains("\\")
+    ) {
+        return textResponse(
+            statusCode = 403,
+            reason = "Forbidden",
+            text = "Invalid game resource path."
+        )
+    }
 
-    return """
-        (() => {
-            const event =
-                new KeyboardEvent(
-                    '$safeType',
-                    {
-                        key: '$safeKey',
-                        code: '$safeCode',
-                        bubbles: true,
-                        cancelable: true,
-                        composed: true,
-                        repeat: ${repeat}
-                    }
-                );
+    val root =
+        runCatching {
+            rootDirectory.canonicalFile
+        }.getOrElse {
+            return textResponse(
+                statusCode = 500,
+                reason = "Internal Server Error",
+                text = "Could not resolve game bundle root."
+            )
+        }
 
-            window.dispatchEvent(event);
+    val target =
+        runCatching {
+            File(
+                root,
+                relative
+            ).canonicalFile
+        }.getOrElse {
+            return textResponse(
+                statusCode = 400,
+                reason = "Bad Request",
+                text = "Invalid game resource."
+            )
+        }
 
-            document.dispatchEvent(event);
-        })();
-    """.trimIndent()
-}
+    val rootPath =
+        root.path + File.separator
 
-/**
- * Basic Android -> DOM KeyboardEvent mapping.
- */
-private fun androidKeyCodeToJavascriptKey(
-    keyCode: Int
-): String {
-    return when (keyCode) {
+    if (
+        target.path != root.path &&
+        !target.path.startsWith(rootPath)
+    ) {
+        return textResponse(
+            statusCode = 403,
+            reason = "Forbidden",
+            text = "Game resource escaped the bundle directory."
+        )
+    }
 
-        android.view.KeyEvent.KEYCODE_DPAD_UP ->
-            "ArrowUp"
+    if (!target.exists() || !target.isFile) {
+        return textResponse(
+            statusCode = 404,
+            reason = "Not Found",
+            text = "Game resource not found."
+        )
+    }
 
-        android.view.KeyEvent.KEYCODE_DPAD_DOWN ->
-            "ArrowDown"
-
-        android.view.KeyEvent.KEYCODE_DPAD_LEFT ->
-            "ArrowLeft"
-
-        android.view.KeyEvent.KEYCODE_DPAD_RIGHT ->
-            "ArrowRight"
-
-        android.view.KeyEvent.KEYCODE_
+    return runCatching {
+        binaryResponse(
+            mimeType = mimeTypeFor(target.name),
+            input = target.inputStr
