@@ -16,27 +16,47 @@ data class GameEntry(
     val importedAtMillis: Long,
     val favorited: Boolean,
     val saveSlots: List<SaveSlot>,
+
     /** Bumped whenever the icon file is rewritten, so launcher UI invalidates its bitmap cache. */
     val iconRevision: Long = 0,
+
     @Serializable(with = UUIDAsStringSerializer::class)
     val portraitLayout: UUID = LayoutLibrary.DEFAULT_PORTRAIT_LAYOUT,
+
     @Serializable(with = UUIDAsStringSerializer::class)
     val landscapeLayout: UUID = LayoutLibrary.DEFAULT_LANDSCAPE_LAYOUT,
-    /** OS reported to the game through GML's os_type / os_* builtins. Defaults to Windows, which is what the C runner hardcoded before this was selectable. */
+
+    /**
+     * OS reported to the game through GML's os_type / os_* builtins.
+     * Defaults to Windows, matching the previous native runner behavior.
+     */
     val runnerOs: RunnerOs = RunnerOs.WINDOWS,
-    /** When true, physical controllers (Bluetooth/USB gamepads) feed the GML gamepad_* builtins. Default on; turn off for games that misbehave with a controller attached. */
+
+    /**
+     * When true, physical controllers (Bluetooth/USB gamepads) feed
+     * the GameMaker gamepad_* builtins.
+     */
     val enablePhysicalControllers: Boolean = true,
-    /** When true, a physical (USB/Bluetooth) keyboard feeds the GML keyboard_* builtins. Default on; turn off for games that misbehave with a keyboard attached. */
+
+    /**
+     * When true, a physical keyboard feeds the GameMaker keyboard_* builtins.
+     */
     val enablePhysicalKeyboard: Boolean = true,
+
     val enableWidescreenHack: Boolean = false,
+
     val postProcessing: PostProcessingSettings = PostProcessingSettings(),
 ) {
-    // Mirrors the YoYoOperatingSystem enum in Butterscotch's runner.h. nativeValue MUST match the
-    // C enum's integer value, since it is passed straight through startRunner to runner->osType.
-    // The OS_LLVM_* debug variants (65536+) are intentionally omitted; they are internal build
-    // flavors, not meaningful targets to pick for a WAD.
+
+    /**
+     * Operating-system targets understood by the existing GameMaker runner.
+     */
     @Serializable
-    enum class RunnerOs(val nativeValue: Int, val fancyName: String, val displayResolution: IntSize? = null) {
+    enum class RunnerOs(
+        val nativeValue: Int,
+        val fancyName: String,
+        val displayResolution: IntSize? = null
+    ) {
         WINDOWS(0, "Windows"),
         MACOSX(1, "macOS"),
         PSP(2, "PSP"),
@@ -60,11 +80,19 @@ data class GameEntry(
         SWITCH(20, "Switch", IntSize(1280, 720)),
     }
 
+    /**
+     * Identifies the runtime/engine that owns a game.
+     *
+     * IMPORTANT:
+     * These types are deliberately separate. Each runtime will continue
+     * to launch its own Activity through EngineRuntime.
+     */
     @Serializable
     sealed class GameType {
+
         @Serializable
         @SerialName("GameMakerStudio")
-        class GameMakerStudio(
+        data class GameMakerStudio(
             val wadVersion: Int,
             val filename: String
         ) : GameType()
@@ -72,18 +100,63 @@ data class GameEntry(
         /**
          * HTML/WebView-based game.
          *
-         * [sourceUrl] is optional for hosted content support later.
-         * [entryPoint] is the local bundle entry file used when the game is imported from a folder
-         * or ZIP and served from the app's private storage.
+         * sourceUrl is reserved for future hosted-content support.
+         * entryPoint is relative to the imported game's bundle directory.
          */
         @Serializable
         @SerialName("Html")
-        class Html(
+        data class Html(
             val sourceUrl: String? = null,
             val entryPoint: String = "index.html"
         ) : GameType()
 
-        // We keep it like this for when we decide to add new GameMaker versions :3
+        /**
+         * LÖVE 2D game.
+         *
+         * A .love file is normally a ZIP archive containing main.lua
+         * at the archive root.
+         */
+        @Serializable
+        @SerialName("Love2D")
+        data class Love2D(
+            val filename: String
+        ) : GameType()
+
+        /**
+         * Adobe Flash game.
+         *
+         * The primary supported file is SWF.
+         */
+        @Serializable
+        @SerialName("Flash")
+        data class Flash(
+            val filename: String
+        ) : GameType()
+
+        /**
+         * Game Boy Advance cartridge image.
+         *
+         * The importer will validate that the actual ROM appears to be
+         * a GBA image instead of blindly trusting the file extension.
+         */
+        @Serializable
+        @SerialName("GameBoyAdvance")
+        data class GameBoyAdvance(
+            val filename: String
+        ) : GameType()
+
+        /**
+         * Sega Mega Drive / Genesis cartridge image.
+         *
+         * Both .md and .bin will be supported by the importer.
+         * The runtime must still validate the actual ROM before attempting
+         * to execute it, because .bin is not exclusive to Mega Drive.
+         */
+        @Serializable
+        @SerialName("MegaDrive")
+        data class MegaDrive(
+            val filename: String
+        ) : GameType()
     }
 
     @Serializable
@@ -94,14 +167,12 @@ data class GameEntry(
         val fancyName: String,
     )
 
-    // Which fullscreen post-processing pass the host blits the game through. OFF is the plain passthrough blit
     @Serializable
     enum class PostProcessingShader(val fancyName: String) {
         OFF("Off"),
         CRT("CRT Shader"),
     }
 
-    // Per-effect strengths for the CRT shader, each a 0.0..1.0 fraction fed straight to the matching shader uniform. 1.0 keeps the shader's baseline look, 0.0 disables that effect
     @Serializable
     data class CrtSettings(
         val curvature: Double = 1.0,
