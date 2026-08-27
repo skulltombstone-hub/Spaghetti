@@ -83,35 +83,45 @@ import net.perfectdreams.butterscotch.android.library.GameEntry
 import net.perfectdreams.butterscotch.android.library.GameLibrary
 import net.perfectdreams.butterscotch.android.runtime.GameLaunchResolver
 
-/**
- * The library list.
- *
- * GameMaker and HTML games share the same library and the same import flow,
- * but launch through their own runtime Activity.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LauncherScreen(
     library: GameLibrary,
     nav: NavHostController,
-    updateAvailableClickCallback: (() -> (Unit))?
+    updateAvailableClickCallback:
+        (() -> Unit)?
 ) {
-    val snackbarHostState = remember { SnackbarHostState() }
+    val snackbarHostState =
+        remember {
+            SnackbarHostState()
+        }
 
-    val context = LocalContext.current
-    var menuExpanded by remember { mutableStateOf(false) }
+    val context =
+        LocalContext.current
 
-    val updateCallback = updateAvailableClickCallback
+    var menuExpanded by remember {
+        mutableStateOf(false)
+    }
+
+    val updateCallback =
+        updateAvailableClickCallback
 
     if (updateCallback != null) {
-        LaunchedEffect(updateCallback) {
-            val result = snackbarHostState.showSnackbar(
-                message = "Update Available!",
-                actionLabel = "Update",
-                duration = SnackbarDuration.Indefinite
-            )
+        LaunchedEffect(
+            updateCallback
+        ) {
+            val result =
+                snackbarHostState.showSnackbar(
+                    message = "Update Available!",
+                    actionLabel = "Update",
+                    duration =
+                        SnackbarDuration.Indefinite
+                )
 
-            if (result == SnackbarResult.ActionPerformed) {
+            if (
+                result ==
+                    SnackbarResult.ActionPerformed
+            ) {
                 updateCallback()
             }
         }
@@ -119,38 +129,53 @@ fun LauncherScreen(
 
     Scaffold(
         snackbarHost = {
-            SnackbarHost(hostState = snackbarHostState) { data ->
+            SnackbarHost(
+                hostState =
+                    snackbarHostState
+            ) { data ->
                 key(data) {
-                    val dismissState = rememberSwipeToDismissBoxState()
+                    val dismissState =
+                        rememberSwipeToDismissBoxState()
 
                     SwipeToDismissBox(
-                        state = dismissState,
+                        state =
+                            dismissState,
                         backgroundContent = {},
                         onDismiss = {
                             data.dismiss()
                         }
                     ) {
                         Snackbar(
-                            modifier = Modifier.padding(12.dp),
-                            containerColor = Color(0xFF2B2B2B),
-                            contentColor = Color.White,
-                            actionContentColor = MaterialTheme.colorScheme.primary,
+                            modifier =
+                                Modifier.padding(12.dp),
+                            containerColor =
+                                Color(0xFF2B2B2B),
+                            contentColor =
+                                Color.White,
+                            actionContentColor =
+                                MaterialTheme.colorScheme.primary,
                             action = {
-                                val actionLabel = data.visuals.actionLabel
+                                val actionLabel =
+                                    data.visuals.actionLabel
 
-                                if (actionLabel != null) {
+                                if (
+                                    actionLabel != null
+                                ) {
                                     TextButton(
                                         onClick = {
                                             data.performAction()
                                         }
                                     ) {
-                                        Text(actionLabel)
+                                        Text(
+                                            actionLabel
+                                        )
                                     }
                                 }
                             }
                         ) {
                             Row(
-                                verticalAlignment = Alignment.CenterVertically
+                                verticalAlignment =
+                                    Alignment.CenterVertically
                             ) {
                                 FrameAnimationImage(
                                     listOf(
@@ -168,7 +193,9 @@ fun LauncherScreen(
                                     Modifier.width(8.dp)
                                 )
 
-                                Text(data.visuals.message)
+                                Text(
+                                    data.visuals.message
+                                )
                             }
                         }
                     }
@@ -179,7 +206,9 @@ fun LauncherScreen(
         topBar = {
             ButterscotchTopBar(
                 title = {
-                    Text("Spaghetti")
+                    Text(
+                        "Spaghetti"
+                    )
                 },
 
                 nav = nav,
@@ -192,13 +221,15 @@ fun LauncherScreen(
                     ) {
                         Icon(
                             Icons.Filled.MoreVert,
-                            contentDescription = "More options",
+                            contentDescription =
+                                "More options",
                             tint = Color.Black
                         )
                     }
 
                     DropdownMenu(
-                        expanded = menuExpanded,
+                        expanded =
+                            menuExpanded,
                         onDismissRequest = {
                             menuExpanded = false
                         }
@@ -212,12 +243,17 @@ fun LauncherScreen(
                             },
 
                             text = {
-                                Text("Settings")
+                                Text(
+                                    "Settings"
+                                )
                             },
 
                             onClick = {
                                 menuExpanded = false
-                                nav.navigate(Route.GeneralSettings)
+
+                                nav.navigate(
+                                    Route.GeneralSettings
+                                )
                             }
                         )
 
@@ -230,12 +266,17 @@ fun LauncherScreen(
                             },
 
                             text = {
-                                Text("About")
+                                Text(
+                                    "About"
+                                )
                             },
 
                             onClick = {
                                 menuExpanded = false
-                                nav.navigate(Route.About)
+
+                                nav.navigate(
+                                    Route.About
+                                )
                             }
                         )
                     }
@@ -246,7 +287,9 @@ fun LauncherScreen(
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 text = {
-                    Text("Add Game")
+                    Text(
+                        "Add Game"
+                    )
                 },
 
                 icon = {
@@ -257,25 +300,33 @@ fun LauncherScreen(
                 },
 
                 onClick = {
-                    nav.navigate(Route.ImportGame)
+                    nav.navigate(
+                        Route.ImportGame
+                    )
                 }
             )
         }
     ) { innerPadding ->
 
-        val entries = library.entries
+        val entries =
+            library.entries
 
         if (entries.isEmpty()) {
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .verticalScroll(rememberScrollState())
-                    .padding(24.dp),
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                        .verticalScroll(
+                            rememberScrollState()
+                        )
+                        .padding(24.dp),
 
-                verticalArrangement = Arrangement.Center,
+                verticalArrangement =
+                    Arrangement.Center,
 
-                horizontalAlignment = Alignment.CenterHorizontally
+                horizontalAlignment =
+                    Alignment.CenterHorizontally
             ) {
                 ButterscotchBobImage(
                     R.drawable.butterscotch_logo,
@@ -284,8 +335,11 @@ fun LauncherScreen(
 
                 Text(
                     "Welcome to Spaghetti!",
-                    style = MaterialTheme.typography.headlineLarge,
-                    textAlign = TextAlign.Center
+                    style =
+                        MaterialTheme.typography
+                            .headlineLarge,
+                    textAlign =
+                        TextAlign.Center
                 )
 
                 Spacer(
@@ -294,8 +348,11 @@ fun LauncherScreen(
 
                 Text(
                     "Tap \"Add Game\" to add a game to your library.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    textAlign = TextAlign.Center
+                    style =
+                        MaterialTheme.typography
+                            .bodyLarge,
+                    textAlign =
+                        TextAlign.Center
                 )
 
                 Spacer(
@@ -304,19 +361,25 @@ fun LauncherScreen(
 
                 Text(
                     "Have fun! ʕ•ᴥ•ʔ",
-                    style = MaterialTheme.typography.bodySmall,
-                    textAlign = TextAlign.Center
+                    style =
+                        MaterialTheme.typography
+                            .bodySmall,
+                    textAlign =
+                        TextAlign.Center
                 )
             }
         } else {
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding),
 
-                contentPadding = PaddingValues(16.dp),
+                contentPadding =
+                    PaddingValues(16.dp),
 
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement =
+                    Arrangement.spacedBy(8.dp)
             ) {
                 itemsIndexed(
                     entries,
@@ -326,14 +389,20 @@ fun LauncherScreen(
                 ) { _, entry ->
 
                     Column(
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement =
+                            Arrangement.spacedBy(8.dp)
                     ) {
                         GameTile(
                             library = library,
                             entry = entry,
 
                             onLaunch = {
-                                if (!GameLaunchResolver.launch(context, entry)) {
+                                if (
+                                    !GameLaunchResolver.launch(
+                                        context,
+                                        entry
+                                    )
+                                ) {
                                     Toast.makeText(
                                         context,
                                         "No runtime is registered for this game yet.",
@@ -364,40 +433,58 @@ private fun GameTile(
     onLaunch: () -> Unit,
     onOpenSettings: () -> Unit
 ) {
-    val context = LocalContext.current
+    val context =
+        LocalContext.current
 
     Card(
-        modifier = Modifier.fillMaxWidth()
+        modifier =
+            Modifier.fillMaxWidth()
     ) {
         Row(
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment =
+                Alignment.CenterVertically
         ) {
             Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .clickable(onClick = onLaunch)
-                    .padding(16.dp),
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .clickable(
+                            onClick = onLaunch
+                        )
+                        .padding(16.dp),
 
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment =
+                    Alignment.CenterVertically
             ) {
                 GameIcon(
                     library = library,
                     entry = entry,
-                    modifier = Modifier.size(42.dp)
+                    modifier =
+                        Modifier.size(42.dp)
                 )
 
                 Column(
-                    modifier = Modifier.padding(start = 12.dp)
+                    modifier =
+                        Modifier.padding(
+                            start = 12.dp
+                        )
                 ) {
                     Text(
                         entry.title,
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            lineHeight = 20.sp
-                        )
+                        style =
+                            MaterialTheme
+                                .typography
+                                .titleMedium
+                                .copy(
+                                    lineHeight =
+                                        20.sp
+                                )
                     )
 
                     Text(
-                        gameRuntimeSubtitle(entry)
+                        gameRuntimeSubtitle(
+                            entry
+                        )
                     )
                 }
             }
@@ -405,8 +492,12 @@ private fun GameTile(
             IconButton(
                 onClick = {
                     if (entry.favorited) {
-                        library.update(entry.id) {
-                            it.copy(favorited = false)
+                        library.update(
+                            entry.id
+                        ) {
+                            it.copy(
+                                favorited = false
+                            )
                         }
 
                         library.save()
@@ -417,8 +508,12 @@ private fun GameTile(
                             Toast.LENGTH_SHORT
                         ).show()
                     } else {
-                        library.update(entry.id) {
-                            it.copy(favorited = true)
+                        library.update(
+                            entry.id
+                        ) {
+                            it.copy(
+                                favorited = true
+                            )
                         }
 
                         library.save()
@@ -434,24 +529,30 @@ private fun GameTile(
                 if (entry.favorited) {
                     Icon(
                         Icons.Filled.Star,
-                        contentDescription = "Unfavorite Game",
-                        tint = Color(0xFFFEB529)
+                        contentDescription =
+                            "Unfavorite Game",
+                        tint =
+                            Color(0xFFFEB529)
                     )
                 } else {
                     Icon(
                         Icons.Filled.StarBorder,
-                        contentDescription = "Favorite Game",
-                        tint = Color(0xFFFEB529)
+                        contentDescription =
+                            "Favorite Game",
+                        tint =
+                            Color(0xFFFEB529)
                     )
                 }
             }
 
             IconButton(
-                onClick = onOpenSettings
+                onClick =
+                    onOpenSettings
             ) {
                 Icon(
                     Icons.Filled.Settings,
-                    contentDescription = "Game settings"
+                    contentDescription =
+                        "Game settings"
                 )
             }
         }
@@ -464,56 +565,66 @@ private fun GameIcon(
     entry: GameEntry,
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
+    val context =
+        LocalContext.current
 
-    val file = library.iconFile(entry)
+    val file =
+        library.iconFile(entry)
 
-    val bitmap = remember(entry.iconRevision) {
-        if (file.exists()) {
-            BitmapFactory.decodeFile(file.absolutePath)
-        } else {
-            null
+    val bitmap =
+        remember(entry.iconRevision) {
+            if (file.exists()) {
+                BitmapFactory.decodeFile(
+                    file.absolutePath
+                )
+            } else {
+                null
+            }
+        } ?: remember(context) {
+            appIconBitmap(context)
         }
-    } ?: remember(context) {
-        appIconBitmap(context)
-    }
 
     Image(
-        painter = BitmapPainter(
-            bitmap.asImageBitmap(),
-            filterQuality = FilterQuality.None
-        ),
+        painter =
+            BitmapPainter(
+                bitmap.asImageBitmap(),
+                filterQuality =
+                    FilterQuality.None
+            ),
 
-        contentDescription = null,
+        contentDescription =
+            null,
 
-        contentScale = ContentScale.Fit,
+        contentScale =
+            ContentScale.Fit,
 
-        modifier = modifier
+        modifier =
+            modifier
     )
 }
 
-/**
- * Loads the app launcher icon as a bitmap.
- */
-private fun appIconBitmap(context: Context): Bitmap {
-    val drawable = context.packageManager.getApplicationIcon(
-        context.packageName
-    )
+private fun appIconBitmap(
+    context: Context
+): Bitmap {
+    val drawable =
+        context.packageManager
+            .getApplicationIcon(
+                context.packageName
+            )
 
     return drawable.toBitmap()
 }
 
-private fun gameRuntimeSubtitle(entry: GameEntry): String {
-    val runtimeName = GameLaunchResolver.runtimeName(entry)
+private fun gameRuntimeSubtitle(
+    entry: GameEntry
+): String {
+    val runtimeName =
+        GameLaunchResolver.runtimeName(
+            entry
+        )
 
     return when (val gameType = entry.gameType) {
         is GameEntry.GameType.GameMakerStudio -> {
-            val baseName = runtimeName ?: "GameMaker"
-            "$baseName (WAD Version ${gameType.wadVersion})"
-        }
-
-        is GameEntry.GameType.Html -> {
-            runtimeName ?: "HTML"
-        }
-    }
-}
+            val baseName =
+                runtimeName
+ 
