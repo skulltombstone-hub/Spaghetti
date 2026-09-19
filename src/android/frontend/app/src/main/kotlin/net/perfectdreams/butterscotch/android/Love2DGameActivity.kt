@@ -677,4 +677,415 @@ private fun BoxWithConstraintsScope.love2DPlacement(
         )
 }
 
-@Compo
+@Composable
+private fun Love2DKeyButton(
+    element: GamepadElement.Key,
+    onKeyboardEvent: (Int, Boolean, Int) -> Unit,
+    onGamepadButton: (Int, Int, Boolean) -> Unit,
+    modifier: Modifier
+) {
+    val label =
+        element.label
+            ?: bindingLabel(element.binding)
+
+    Box(
+        modifier = modifier
+            .background(
+                Color(0xAA222222),
+                CircleShape
+            )
+            .pointerInput(
+                element.id
+            ) {
+                awaitEachGesture {
+                    awaitFirstDown(
+                        requireUnconsumed = false
+                    )
+
+                    when (val binding = element.binding) {
+
+                        is InputBinding.Keyboard -> {
+                            onKeyboardEvent(
+                                binding.vk,
+                                true,
+                                0
+                            )
+                        }
+
+                        is InputBinding.GamepadButton -> {
+                            onGamepadButton(
+                                binding.device,
+                                binding.button,
+                                true
+                            )
+                        }
+                    }
+
+                    try {
+                        waitForUpOrCancellation()
+                    } finally {
+
+                        when (val binding = element.binding) {
+
+                            is InputBinding.Keyboard -> {
+                                onKeyboardEvent(
+                                    binding.vk,
+                                    false,
+                                    0
+                                )
+                            }
+
+                            is InputBinding.GamepadButton -> {
+                                onGamepadButton(
+                                    binding.device,
+                                    binding.button,
+                                    false
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            color = Color.White,
+            fontSize = 18.sp
+        )
+    }
+}
+
+@Composable
+private fun Love2DJoystick(
+    element: GamepadElement.Joystick,
+    onKeyboardEvent: (Int, Boolean, Int) -> Unit,
+    onGamepadButton: (Int, Int, Boolean) -> Unit,
+    modifier: Modifier
+) {
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+
+            Love2DDirectionalButton(
+                binding = element.up,
+                label = "▲",
+                onKeyboardEvent = onKeyboardEvent,
+                onGamepadButton = onGamepadButton
+            )
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+
+                Love2DDirectionalButton(
+                    binding = element.left,
+                    label = "◀",
+                    onKeyboardEvent = onKeyboardEvent,
+                    onGamepadButton = onGamepadButton
+                )
+
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .background(
+                            Color(0xAA222222),
+                            CircleShape
+                        )
+                )
+
+                Love2DDirectionalButton(
+                    binding = element.right,
+                    label = "▶",
+                    onKeyboardEvent = onKeyboardEvent,
+                    onGamepadButton = onGamepadButton
+                )
+            }
+
+            Love2DDirectionalButton(
+                binding = element.down,
+                label = "▼",
+                onKeyboardEvent = onKeyboardEvent,
+                onGamepadButton = onGamepadButton
+            )
+        }
+    }
+}
+
+@Composable
+private fun Love2DDirectionalButton(
+    binding: InputBinding,
+    label: String,
+    onKeyboardEvent: (Int, Boolean, Int) -> Unit,
+    onGamepadButton: (Int, Int, Boolean) -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .size(42.dp)
+            .background(
+                Color(0xAA222222),
+                CircleShape
+            )
+            .pointerInput(binding) {
+                awaitEachGesture {
+                    awaitFirstDown(
+                        requireUnconsumed = false
+                    )
+
+                    sendBinding(
+                        binding = binding,
+                        pressed = true,
+                        onKeyboardEvent = onKeyboardEvent,
+                        onGamepadButton = onGamepadButton
+                    )
+
+                    try {
+                        waitForUpOrCancellation()
+                    } finally {
+                        sendBinding(
+                            binding = binding,
+                            pressed = false,
+                            onKeyboardEvent = onKeyboardEvent,
+                            onGamepadButton = onGamepadButton
+                        )
+                    }
+                }
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            color = Color.White,
+            fontSize = 18.sp
+        )
+    }
+}
+
+private fun sendBinding(
+    binding: InputBinding,
+    pressed: Boolean,
+    onKeyboardEvent: (Int, Boolean, Int) -> Unit,
+    onGamepadButton: (Int, Int, Boolean) -> Unit
+) {
+    when (binding) {
+
+        is InputBinding.Keyboard -> {
+            onKeyboardEvent(
+                binding.vk,
+                pressed,
+                0
+            )
+        }
+
+        is InputBinding.GamepadButton -> {
+            onGamepadButton(
+                binding.device,
+                binding.button,
+                pressed
+            )
+        }
+    }
+}
+
+private fun bindingLabel(
+    binding: InputBinding
+): String {
+    return when (binding) {
+
+        is InputBinding.Keyboard ->
+            android.view.KeyEvent
+                .keyCodeToString(binding.vk)
+                .removePrefix("KEYCODE_")
+
+        is InputBinding.GamepadButton ->
+            "B${binding.button}"
+    }
+}
+
+@Composable
+private fun Love2DMenuButton(
+    element: GamepadElement.Menu,
+    onClick: () -> Unit,
+    modifier: Modifier
+) {
+    Box(
+        modifier = modifier
+            .background(
+                Color(0xAA111111),
+                CircleShape
+            )
+            .pointerInput(element.id) {
+                awaitEachGesture {
+                    awaitFirstDown(
+                        requireUnconsumed = false
+                    )
+
+                    waitForUpOrCancellation()
+
+                    onClick()
+                }
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = "☰",
+            color = Color.White,
+            fontSize = 20.sp
+        )
+    }
+}
+
+@Composable
+private fun Love2DMenu(
+    controlsVisible: Boolean,
+    onResume: () -> Unit,
+    onToggleControls: () -> Unit,
+    onExit: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xCC000000)),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+
+            Love2DMenuAction(
+                text = "Continuar",
+                onClick = onResume
+            )
+
+            Love2DMenuAction(
+                text =
+                    if (controlsVisible) {
+                        "Ocultar controles"
+                    } else {
+                        "Mostrar controles"
+                    },
+                onClick = onToggleControls
+            )
+
+            Love2DMenuAction(
+                text = "Sair do jogo",
+                onClick = onExit
+            )
+        }
+    }
+}
+
+@Composable
+private fun Love2DMenuAction(
+    text: String,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .size(
+                width = 220.dp,
+                height = 56.dp
+            )
+            .background(
+                Color(0xFF222222),
+                CircleShape
+            )
+            .pointerInput(text) {
+                awaitEachGesture {
+                    awaitFirstDown(
+                        requireUnconsumed = false
+                    )
+
+                    waitForUpOrCancellation()
+
+                    onClick()
+                }
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            color = Color.White,
+            fontSize = 16.sp
+        )
+    }
+}
+
+/**
+ * JNI contract between Android and the native LÖVE runtime.
+ *
+ * IMPORTANT:
+ * The methods below intentionally have no Kotlin implementation.
+ * Their corresponding JNI implementation will be added when the LÖVE
+ * native source is integrated into the Android native build.
+ */
+private object Love2DNative {
+
+    @Volatile
+    private var loaded = false
+
+    fun ensureLoaded() {
+        if (loaded) {
+            return
+        }
+
+        synchronized(this) {
+            if (loaded) {
+                return
+            }
+
+            System.loadLibrary("spaghetti_love2d")
+            loaded = true
+        }
+    }
+
+    external fun initializeRuntime(
+        loveFilePath: String,
+        saveDirectory: String
+    )
+
+    external fun attachSurface(
+        surface: Surface
+    )
+
+    external fun detachSurface()
+
+    external fun setSurfaceSize(
+        width: Int,
+        height: Int
+    )
+
+    external fun startRuntime()
+
+    external fun pauseRuntime()
+
+    external fun resumeRuntime()
+
+    external fun stopRuntime()
+
+    external fun onAndroidKey(
+        keyCode: Int,
+        pressed: Boolean,
+        repeatCount: Int
+    )
+
+    external fun onVirtualGamepadButton(
+        device: Int,
+        button: Int,
+        pressed: Boolean
+    )
+
+    external fun onTouch(
+        action: Int,
+        pointerId: Int,
+        x: Float,
+        y: Float,
+        pressure: Float
+    )
+
+    external fun releaseAllInputs()
+}
