@@ -700,11 +700,12 @@ private fun serveGameFile(
     return runCatching {
         binaryResponse(
             mimeType = mimeTypeFor(target.name),
-            input = target.inputStream()
+            input = target.inputStream().buffered()
         )
     }.getOrElse { error ->
+
         Log.e(
-            "FlashGameActivity",
+            "Ruffle",
             "Failed to open game resource ${target.absolutePath}",
             error
         )
@@ -715,4 +716,655 @@ private fun serveGameFile(
             text = "Could not open game resource."
         )
     }
+}
+
+/**
+ * Creates a WebResourceResponse for binary/text resources.
+ */
+private fun binaryResponse(
+    mimeType: String,
+    input: java.io.InputStream
+): WebResourceResponse {
+    val encoding =
+        if (
+            mimeType.startsWith("text/") ||
+            mimeType == "application/javascript" ||
+            mimeType == "text/javascript" ||
+            mimeType == "application/json"
+        ) {
+            "UTF-8"
+        } else {
+            null
+        }
+
+    return WebResourceResponse(
+        mimeType,
+        encoding,
+        200,
+        "OK",
+        mapOf(
+            "Cache-Control" to "no-store",
+            "Access-Control-Allow-Origin" to "*"
+        ),
+        input
+    )
+}
+
+/**
+ * Plain-text error response.
+ */
+private fun textResponse(
+    statusCode: Int,
+    reason: String,
+    text: String
+): WebResourceResponse {
+    return WebResourceResponse(
+        "text/plain",
+        "UTF-8",
+        statusCode,
+        reason,
+        mapOf(
+            "Cache-Control" to "no-store",
+            "Access-Control-Allow-Origin" to "*"
+        ),
+        text.byteInputStream(StandardCharsets.UTF_8)
+    )
+}
+
+/**
+ * MIME table for the Ruffle package and imported game files.
+ */
+private fun mimeTypeFor(
+    fileName: String
+): String {
+    return when (
+        fileName
+            .substringAfterLast(
+                '.',
+                ""
+            )
+            .lowercase()
+    ) {
+        "js" ->
+            "text/javascript"
+
+        "json",
+        "map" ->
+            "application/json"
+
+        "wasm" ->
+            "application/wasm"
+
+        "html",
+        "htm" ->
+            "text/html"
+
+        "css" ->
+            "text/css"
+
+        "svg" ->
+            "image/svg+xml"
+
+        "png" ->
+            "image/png"
+
+        "jpg",
+        "jpeg" ->
+            "image/jpeg"
+
+        "gif" ->
+            "image/gif"
+
+        "webp" ->
+            "image/webp"
+
+        "mp3" ->
+            "audio/mpeg"
+
+        "wav" ->
+            "audio/wav"
+
+        "ogg" ->
+            "audio/ogg"
+
+        "mp4" ->
+            "video/mp4"
+
+        "webm" ->
+            "video/webm"
+
+        "swf" ->
+            "application/x-shockwave-flash"
+
+        else ->
+            "application/octet-stream"
+    }
+}
+
+/**
+ * Minimal Ruffle host page.
+ *
+ * Important:
+ * - ruffle.js remains untouched.
+ * - publicPath points to the whole Ruffle package directory.
+ * - the SWF is presented as a sibling resource of the same synthetic origin.
+ */
+private fun createRuffleHtml(
+    swfFileName: String
+): String {
+    val encodedSwf =
+        Uri.encode(
+            swfFileName
+        )
+
+    val gameUrl =
+        "$GAMES_URL$encodedSwf"
+
+    val safeRuffleUrl =
+        RUFFLE_URL
+            .replace("\\", "\\\\")
+            .replace("'", "\\'")
+
+    val safeGameUrl =
+        gameUrl
+            .replace("\\", "\\\\")
+            .replace("'", "\\'")
+
+    return """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+
+            <meta
+                name="viewport"
+                content="width=device-width,
+                         initial-scale=1.0,
+                         maximum-scale=1.0,
+                         user-scalable=no,
+                         viewport-fit=cover"
+            >
+
+            <style>
+                html,
+                body {
+                    width: 100%;
+                    height: 100%;
+                    margin: 0;
+                    padding: 0;
+                    overflow: hidden;
+                    background: #000;
+                }
+
+                body {
+                    touch-action: none;
+                }
+
+                #ruffle-container {
+                    position: fixed;
+                    inset: 0;
+                    width: 100%;
+                    height: 100%;
+                    overflow: hidden;
+                    background: #000;
+                }
+            </style>
+
+            <script>
+                window.RufflePlayer =
+                    window.RufflePlayer || {};
+
+                window.RufflePlayer.config =
+                    window.RufflePlayer.config || {};
+
+                window.RufflePlayer.config.publicPath =
+                    '$safeRuffleUrl';
+
+                window.RufflePlayer.config.polyfills =
+                    false;
+            </script>
+
+            <script
+                src="${RUFFLE_URL}ruffle.js">
+            </script>
+
+            <script>
+                window.addEventListener(
+                    "DOMContentLoaded",
+                    function () {
+                        try {
+                            const source =
+                                window.RufflePlayer.newest();
+
+                            if (!source) {
+                                throw new Error(
+                                    "RufflePlayer.newest() returned null."
+                                );
+                            }
+
+                            const player =
+                                source.createPlayer();
+
+                            player.style.width =
+                                "100%";
+
+                            player.style.height =
+                                "100%";
+
+                            player.style.display =
+                                "block";
+
+                            const container =
+                                document.getElementById(
+                                    "ruffle-container"
+                                );
+
+                            if (!container) {
+                                throw new Error(
+                                    "Ruffle container not found."
+                                );
+                            }
+
+                            container.appendChild(
+                                player
+                            );
+
+                            player
+                                .ruffle()
+                                .load('$safeGameUrl')
+                                .catch(function (error) {
+                                    console.error(
+                                        "Ruffle failed to load SWF:",
+                                        error
+                                    );
+                                });
+
+                        } catch (error) {
+                            console.error(
+                                "Failed to create Ruffle player:",
+                                error
+                            );
+                        }
+                    }
+                );
+            </script>
+        </head>
+
+        <body>
+            <div id="ruffle-container"></div>
+        </body>
+        </html>
+    """.trimIndent()
+}
+
+/**
+ * Keeps the HTML viewport stable after the WebView loads.
+ */
+private fun injectFlashViewportFixes(
+    webView: WebView
+) {
+    webView.evaluateJavascript(
+        """
+        (() => {
+            const html =
+                document.documentElement;
+
+            const body =
+                document.body;
+
+            if (html) {
+                html.style.width = "100%";
+                html.style.height = "100%";
+                html.style.margin = "0";
+                html.style.padding = "0";
+                html.style.overflow = "hidden";
+            }
+
+            if (body) {
+                body.style.width = "100%";
+                body.style.height = "100%";
+                body.style.margin = "0";
+                body.style.padding = "0";
+                body.style.overflow = "hidden";
+            }
+        })();
+        """.trimIndent(),
+        null
+    )
+}
+
+/**
+ * Tracks currently pressed Android keys and converts them to DOM keyboard
+ * events consumed by the Ruffle/WebView environment.
+ */
+private class FlashKeyState {
+
+    private val pressedKeys =
+        mutableSetOf<Int>()
+
+    fun press(
+        webView: WebView,
+        keyCode: Int,
+        repeat: Boolean
+    ) {
+        val mapped =
+            androidKeyCodeToJavascript(
+                keyCode
+            )
+
+        if (!repeat) {
+            if (!pressedKeys.add(keyCode)) {
+                return
+            }
+        } else {
+            if (!pressedKeys.contains(keyCode)) {
+                pressedKeys.add(keyCode)
+            }
+        }
+
+        webView.evaluateJavascript(
+            createKeyboardEventScript(
+                type = "keydown",
+                key = mapped.key,
+                code = mapped.code,
+                repeat = repeat
+            ),
+            null
+        )
+    }
+
+    fun release(
+        webView: WebView,
+        keyCode: Int
+    ) {
+        if (!pressedKeys.remove(keyCode)) {
+            return
+        }
+
+        val mapped =
+            androidKeyCodeToJavascript(
+                keyCode
+            )
+
+        webView.evaluateJavascript(
+            createKeyboardEventScript(
+                type = "keyup",
+                key = mapped.key,
+                code = mapped.code,
+                repeat = false
+            ),
+            null
+        )
+    }
+
+    fun releaseAll(
+        webView: WebView?
+    ) {
+        if (webView == null) {
+            pressedKeys.clear()
+            return
+        }
+
+        val keys =
+            pressedKeys.toList()
+
+        for (keyCode in keys) {
+            release(
+                webView = webView,
+                keyCode = keyCode
+            )
+        }
+    }
+}
+
+/**
+ * Simple DOM keyboard mapping.
+ */
+private data class JavascriptKey(
+    val key: String,
+    val code: String
+)
+
+private fun androidKeyCodeToJavascript(
+    keyCode: Int
+): JavascriptKey {
+
+    if (
+        keyCode >= KeyEvent.KEYCODE_A &&
+        keyCode <= KeyEvent.KEYCODE_Z
+    ) {
+        val letter =
+            ('A'.code +
+                (
+                    keyCode -
+                        KeyEvent.KEYCODE_A
+                    )
+                ).toChar()
+
+        return JavascriptKey(
+            key = letter.lowercase(),
+            code = "Key$letter"
+        )
+    }
+
+    if (
+        keyCode >= KeyEvent.KEYCODE_0 &&
+        keyCode <= KeyEvent.KEYCODE_9
+    ) {
+        val digit =
+            ('0'.code +
+                (
+                    keyCode -
+                        KeyEvent.KEYCODE_0
+                    )
+                ).toChar()
+
+        return JavascriptKey(
+            key = digit.toString(),
+            code = "Digit$digit"
+        )
+    }
+
+    return when (keyCode) {
+
+        KeyEvent.KEYCODE_DPAD_UP ->
+            JavascriptKey("ArrowUp", "ArrowUp")
+
+        KeyEvent.KEYCODE_DPAD_DOWN ->
+            JavascriptKey("ArrowDown", "ArrowDown")
+
+        KeyEvent.KEYCODE_DPAD_LEFT ->
+            JavascriptKey("ArrowLeft", "ArrowLeft")
+
+        KeyEvent.KEYCODE_DPAD_RIGHT ->
+            JavascriptKey("ArrowRight", "ArrowRight")
+
+        KeyEvent.KEYCODE_ENTER ->
+            JavascriptKey("Enter", "Enter")
+
+        KeyEvent.KEYCODE_ESCAPE ->
+            JavascriptKey("Escape", "Escape")
+
+        KeyEvent.KEYCODE_SPACE ->
+            JavascriptKey(" ", "Space")
+
+        KeyEvent.KEYCODE_TAB ->
+            JavascriptKey("Tab", "Tab")
+
+        KeyEvent.KEYCODE_DEL ->
+            JavascriptKey("Backspace", "Backspace")
+
+        KeyEvent.KEYCODE_FORWARD_DEL ->
+            JavascriptKey("Delete", "Delete")
+
+        KeyEvent.KEYCODE_SHIFT_LEFT,
+        KeyEvent.KEYCODE_SHIFT_RIGHT ->
+            JavascriptKey("Shift", "ShiftLeft")
+
+        KeyEvent.KEYCODE_CTRL_LEFT,
+        KeyEvent.KEYCODE_CTRL_RIGHT ->
+            JavascriptKey("Control", "ControlLeft")
+
+        KeyEvent.KEYCODE_ALT_LEFT,
+        KeyEvent.KEYCODE_ALT_RIGHT ->
+            JavascriptKey("Alt", "AltLeft")
+
+        KeyEvent.KEYCODE_META_LEFT,
+        KeyEvent.KEYCODE_META_RIGHT ->
+            JavascriptKey("Meta", "MetaLeft")
+
+        KeyEvent.KEYCODE_COMMA ->
+            JavascriptKey(",", "Comma")
+
+        KeyEvent.KEYCODE_PERIOD ->
+            JavascriptKey(".", "Period")
+
+        KeyEvent.KEYCODE_SLASH ->
+            JavascriptKey("/", "Slash")
+
+        KeyEvent.KEYCODE_BACKSLASH ->
+            JavascriptKey("\\", "Backslash")
+
+        KeyEvent.KEYCODE_SEMICOLON ->
+            JavascriptKey(";", "Semicolon")
+
+        KeyEvent.KEYCODE_APOSTROPHE ->
+            JavascriptKey("'", "Quote")
+
+        KeyEvent.KEYCODE_LEFT_BRACKET ->
+            JavascriptKey("[", "BracketLeft")
+
+        KeyEvent.KEYCODE_RIGHT_BRACKET ->
+            JavascriptKey("]", "BracketRight")
+
+        KeyEvent.KEYCODE_MINUS ->
+            JavascriptKey("-", "Minus")
+
+        KeyEvent.KEYCODE_EQUALS ->
+            JavascriptKey("=", "Equal")
+
+        KeyEvent.KEYCODE_GRAVE ->
+            JavascriptKey("`", "Backquote")
+
+        KeyEvent.KEYCODE_PAGE_UP ->
+            JavascriptKey("PageUp", "PageUp")
+
+        KeyEvent.KEYCODE_PAGE_DOWN ->
+            JavascriptKey("PageDown", "PageDown")
+
+        KeyEvent.KEYCODE_MOVE_HOME ->
+            JavascriptKey("Home", "Home")
+
+        KeyEvent.KEYCODE_MOVE_END ->
+            JavascriptKey("End", "End")
+
+        KeyEvent.KEYCODE_INSERT ->
+            JavascriptKey("Insert", "Insert")
+
+        KeyEvent.KEYCODE_F1 ->
+            JavascriptKey("F1", "F1")
+
+        KeyEvent.KEYCODE_F2 ->
+            JavascriptKey("F2", "F2")
+
+        KeyEvent.KEYCODE_F3 ->
+            JavascriptKey("F3", "F3")
+
+        KeyEvent.KEYCODE_F4 ->
+            JavascriptKey("F4", "F4")
+
+        KeyEvent.KEYCODE_F5 ->
+            JavascriptKey("F5", "F5")
+
+        KeyEvent.KEYCODE_F6 ->
+            JavascriptKey("F6", "F6")
+
+        KeyEvent.KEYCODE_F7 ->
+            JavascriptKey("F7", "F7")
+
+        KeyEvent.KEYCODE_F8 ->
+            JavascriptKey("F8", "F8")
+
+        KeyEvent.KEYCODE_F9 ->
+            JavascriptKey("F9", "F9")
+
+        KeyEvent.KEYCODE_F10 ->
+            JavascriptKey("F10", "F10")
+
+        KeyEvent.KEYCODE_F11 ->
+            JavascriptKey("F11", "F11")
+
+        KeyEvent.KEYCODE_F12 ->
+            JavascriptKey("F12", "F12")
+
+        else ->
+            JavascriptKey(
+                key = KeyEvent.keyCodeToString(keyCode),
+                code = "AndroidKeyCode$keyCode"
+            )
+    }
+}
+
+/**
+ * Builds a browser KeyboardEvent.
+ */
+private fun createKeyboardEventScript(
+    type: String,
+    key: String,
+    code: String,
+    repeat: Boolean
+): String {
+    val safeType =
+        type.replace(
+            "'",
+            "\\'"
+        )
+
+    val safeKey =
+        key.replace(
+            "\\",
+            "\\\\"
+        ).replace(
+            "'",
+            "\\'"
+        )
+
+    val safeCode =
+        code.replace(
+            "\\",
+            "\\\\"
+        ).replace(
+            "'",
+            "\\'"
+        )
+
+    return """
+        (() => {
+            const event =
+                new KeyboardEvent(
+                    '$safeType',
+                    {
+                        key: '$safeKey',
+                        code: '$safeCode',
+                        bubbles: true,
+                        cancelable: true,
+                        composed: true,
+                        repeat: $repeat
+                    }
+                );
+
+            window.dispatchEvent(event);
+            document.dispatchEvent(event);
+
+            const active =
+                document.activeElement;
+
+            if (
+                active &&
+                active !== document.body
+            ) {
+                active.dispatchEvent(event);
+            }
+        })();
+    """.trimIndent()
 }
