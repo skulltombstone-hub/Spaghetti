@@ -54,6 +54,11 @@ import net.perfectdreams.butterscotch.android.theme.ButterscotchAndroidTheme
 import org.json.JSONObject
 import java.io.File
 import java.util.UUID
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import java.io.File
 
 /**
  * Activity responsible for running imported HTML games.
@@ -184,6 +189,8 @@ class HtmlGameActivity : ComponentActivity() {
                 View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
                 View.SYSTEM_UI_FLAG_LAYOUT_STABLE
     }
+    
+    private lateinit var htmlGameResourceServer: HtmlGameResourceServer
 }
 
 @SuppressLint("SetJavaScriptEnabled")
@@ -203,7 +210,12 @@ private fun HtmlGameContent(
 
     val rootDirectory = library.bundleDir(entry)
     val entryFile = File(rootDirectory, gameType.entryPoint)
-
+    
+    htmlGameResourceServer = HtmlGameResourceServer(
+    entryFile.parentFile
+        ?: error("HTML entry point has no parent directory.")
+    )
+    
     var showControls by remember {
         mutableStateOf(true)
     }
@@ -277,91 +289,57 @@ private fun HtmlGameContent(
 
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
-private fun HtmlWebView(
-    entryFile: File,
-    onWebViewCreated: (WebView) -> Unit
+private fun configureHtmlWebView(
+    webView: WebView,
+    entryFile: File
 ) {
-    AndroidView(
-        modifier = Modifier.fillMaxSize(),
+    val bundleDirectory = entryFile.parentFile
+        ?: error("HTML entry point has no parent directory.")
 
-        factory = { context ->
-            WebView(context).apply {
-                onWebViewCreated(this)
+    htmlGameResourceServer = HtmlGameResourceServer(bundleDirectory)
 
-                setBackgroundColor(AndroidColor.BLACK)
+    val settings = webView.settings
 
-                settings.apply {
-                    javaScriptEnabled = true
-                    domStorageEnabled = true
-                    databaseEnabled = true
+    settings.javaScriptEnabled = true
+    settings.domStorageEnabled = true
+    settings.databaseEnabled = true
 
-                    allowFileAccess = true
-                    allowContentAccess = true
+    /*
+     * The game is no longer loaded with file://.
+     *
+     * These permissions are therefore no longer required.
+     */
+    settings.allowFileAccess = false
+    settings.allowContentAccess = false
+    settings.allowFileAccessFromFileURLs = false
+    settings.allowUniversalAccessFromFileURLs = false
 
-                    /*
-                     * HTML games commonly load JavaScript, JSON, images,
-                     * audio and other files from sibling directories.
-                     */
-                    allowFileAccessFromFileURLs = true
-                    allowUniversalAccessFromFileURLs = true
+    /*
+     * Keep WebGL available.
+     */
+    settings.setSupportZoom(false)
+    settings.builtInZoomControls = false
+    settings.displayZoomControls = false
 
-                    javaScriptCanOpenWindowsAutomatically = true
-                    mediaPlaybackRequiresUserGesture = false
+    webView.webViewClient = object : WebViewClient() {
 
-                    useWideViewPort = true
-                    loadWithOverviewMode = true
-                    setInitialScale(1)
+        override fun shouldInterceptRequest(
+            view: WebView,
+            request: WebResourceRequest
+        ): WebResourceResponse? {
 
-                    builtInZoomControls = false
-                    displayZoomControls = false
-                    setSupportZoom(false)
-
-                    cacheMode = WebSettings.LOAD_DEFAULT
-
-                    userAgentString =
-                        "$userAgentString SpaghettiHTMLRunner/1.1"
-                }
-
-                webChromeClient = WebChromeClient()
-
-                webViewClient = object : WebViewClient() {
-
-                    override fun onPageFinished(
-                        view: WebView,
-                        url: String?
-                    ) {
-                        super.onPageFinished(view, url)
-                        injectHtmlViewportFixes(view)
-                    }
-
-                    override fun shouldOverrideUrlLoading(
-                        view: WebView,
-                        request: WebResourceRequest
-                    ): Boolean {
-                        return when (request.url.scheme?.lowercase()) {
-                            "file",
-                            "http",
-                            "https" -> false
-
-                            else -> true
-                        }
-                    }
-                }
-
-                systemUiVisibility =
-                    View.SYSTEM_UI_FLAG_FULLSCREEN or
-                        View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
-                        View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
-                        View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
-                        View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
-                        View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-
-                if (entryFile.exists()) {
-                    loadUrl(entryFile.toURI().toString())
-                }
-            }
+            return htmlGameResourceServer.intercept(
+                request.url
+            )
         }
+    }
+
+    val entryUrl = HtmlGameResourceServer.buildGameUrl(
+        bundleDirectory = bundleDirectory,
+        entryFile = entryFile
     )
+
+    webView.loadUrl(entryUrl)
 }
 
 private fun injectHtmlViewportFixes(webView: WebView) {
