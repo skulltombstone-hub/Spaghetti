@@ -700,4 +700,19 @@ private fun serveGameFile(
     return runCatching {
         binaryResponse(
             mimeType = mimeTypeFor(target.name),
-            input = target.inputStr
+            input = target.inputStream()
+        )
+    }.getOrElse { error ->
+        Log.e(
+            "FlashGameActivity",
+            "Failed to open game resource ${target.absolutePath}",
+            error
+        )
+
+        textResponse(
+            statusCode = 500,
+            reason = "Internal Server Error",
+            text = "Could not open game resource."
+        )
+    }
+}
