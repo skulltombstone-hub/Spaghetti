@@ -42,6 +42,17 @@
             android:exported="false"
             android:configChanges="orientation|screenSize|screenLayout|keyboard|keyboardHidden|navigation|uiMode"
             android:theme="@style/Theme.ButterscotchAndroid" />
+        <activity
+            android:name=".FlashGameActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|keyboard|keyboardHidden|navigation|uiMode"
+            android:theme="@style/Theme.ButterscotchAndroid" />
+
+        <activity
+            android:name=".Love2DGameActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|keyboard|keyboardHidden|navigation|uiMode"
+            android:theme="@style/Theme.ButterscotchAndroid" />
     </application>
 
 </manifest>
