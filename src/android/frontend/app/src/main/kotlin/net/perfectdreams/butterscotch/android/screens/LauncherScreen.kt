@@ -626,5 +626,29 @@ private fun gameRuntimeSubtitle(
     return when (val gameType = entry.gameType) {
         is GameEntry.GameType.GameMakerStudio -> {
             val baseName =
-                runtimeName
- 
+                runtimeName ?: "GameMaker"
+
+            "$baseName (WAD Version ${gameType.wadVersion})"
+        }
+
+        is GameEntry.GameType.Html -> {
+            runtimeName ?: "HTML"
+        }
+
+        is GameEntry.GameType.Flash -> {
+            runtimeName ?: "Adobe Flash"
+        }
+
+        is GameEntry.GameType.Love2D -> {
+            runtimeName ?: "LÖVE 2D"
+        }
+
+        is GameEntry.GameType.GameBoyAdvance -> {
+            runtimeName ?: "Game Boy Advance"
+        }
+
+        is GameEntry.GameType.MegaDrive -> {
+            runtimeName ?: "Sega Mega Drive"
+        }
+    }
+}
