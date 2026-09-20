@@ -292,6 +292,195 @@ object GameImporter {
      * Shared tail for both import paths: verify the bundle contains a supported entry point,
      * derive metadata, scan icons, and build the [Result.Success].
      */
+
+    private fun finalizeFromBundle(
+            library: GameLibrary,
+            staged: GameLibrary.StagedGame,
+            bundleRoot: File,
+            folderName: String,
+            additionalIconCandidates: List<IconCandidate> = emptyList(),
+    ): Result {
+
+            /*
+             * GameMaker has priority because a WAD is the native format
+             * already supported by the original Butterscotch runner.
+             */
+            val wadFile = findWadFile(bundleRoot)
+
+            if (wadFile != null) {
+                if (!wadFile.exists()) {
+                    library.discardStaging(staged)
+                    return Result.Failure(
+                        "WAD vanished after copy (this is a bug)."
+                    )
+                }
+
+                val (suggestedTitle, wadVersion) =
+                    ParsedDataWin
+                        .parseLight(wadFile.absolutePath)
+                        ?.use { dw ->
+                            val name =
+                                (dw.displayName ?: dw.name)
+                                    ?.takeIf { it.isNotBlank() }
+
+                            name to dw.wadVersion
+                        }
+                        ?: (null to -1)
+
+                val iconCandidates =
+                    runCatching {
+                        scanIconCandidates(bundleRoot)
+                    }
+                        .onFailure {
+                            Log.w(
+                                TAG,
+                                "Icon extraction failed for ${staged.id}",
+                                it
+                            )
+                        }
+                        .getOrDefault(emptyList()) +
+                        additionalIconCandidates
+
+                return Result.Success(
+                    staged = staged,
+                    gameType =
+                        GameEntry.GameType.GameMakerStudio(
+                            wadVersion = wadVersion,
+                            filename = wadFile.name
+                        ),
+                    suggestedTitle =
+                        suggestedTitle ?: folderName,
+                    folderName = folderName,
+                    iconCandidates = iconCandidates,
+                    wadFilename = wadFile.name,
+                    wadVersion = wadVersion,
+                    entryPoint = null
+                )
+            }
+
+            /*
+             * LÖVE 2D.
+             */
+            val loveFile = findLove2DFile(bundleRoot)
+
+            if (loveFile != null) {
+                val iconCandidates =
+                    runCatching {
+                        scanIconCandidates(bundleRoot)
+                    }
+                        .onFailure {
+                            Log.w(
+                                TAG,
+                                "Icon extraction failed for ${staged.id}",
+                                it
+                            )
+                        }
+                        .getOrDefault(emptyList()) +
+                        additionalIconCandidates
+
+                return Result.Success(
+                    staged = staged,
+                    gameType =
+                        GameEntry.GameType.Love2D(
+                            filename =
+                                loveFile
+                                    .relativeTo(bundleRoot)
+                                    .invariantSeparatorsPath
+                        ),
+                    suggestedTitle =
+                        loveFile.nameWithoutExtension
+                            .takeIf { it.isNotBlank() }
+                            ?: folderName,
+                    folderName = folderName,
+                    iconCandidates = iconCandidates,
+                    entryPoint = null
+                )
+            }
+
+            /*
+             * Adobe Flash / SWF.
+             */
+            val flashFile = findFlashFile(bundleRoot)
+
+            if (flashFile != null) {
+                val iconCandidates =
+                    runCatching {
+                        scanIconCandidates(bundleRoot)
+                    }
+                        .onFailure {
+                            Log.w(
+                                TAG,
+                                "Icon extraction failed for ${staged.id}",
+                                it
+                            )
+                        }
+                        .getOrDefault(emptyList()) +
+                        additionalIconCandidates
+
+                return Result.Success(
+                    staged = staged,
+                    gameType =
+                        GameEntry.GameType.Flash(
+                            filename =
+                                flashFile
+                                    .relativeTo(bundleRoot)
+                                    .invariantSeparatorsPath
+                        ),
+                    suggestedTitle =
+                        flashFile.nameWithoutExtension
+                            .takeIf { it.isNotBlank() }
+                            ?: folderName,
+                    folderName = folderName,
+                    iconCandidates = iconCandidates,
+                    entryPoint = null
+                )
+            }
+
+            /*
+             * HTML remains the WebView runtime.
+             */
+            val htmlFile =
+                findHtmlEntryPoint(bundleRoot)
+                    ?: return Result.Failure(
+                        "Copied bundle does not contain a supported game."
+                    )
+
+            val entryPoint =
+                htmlFile
+                    .relativeTo(bundleRoot)
+                    .invariantSeparatorsPath
+
+            val htmlTitle =
+                extractHtmlTitle(htmlFile)
+
+            val iconCandidates =
+                runCatching {
+                    scanIconCandidates(bundleRoot)
+                }
+                    .onFailure {
+                        Log.w(
+                            TAG,
+                            "Icon extraction failed for ${staged.id}",
+                            it
+                        )
+                    }
+                    .getOrDefault(emptyList()) +
+                    additionalIconCandidates
+
+            return Result.Success(
+                staged = staged,
+                gameType =
+                    GameEntry.GameType.Html(
+                        sourceUrl = null,
+                        entryPoint = entryPoint
+                    ),
+                suggestedTitle =
+                    htmlTitle ?: folderName,
+                folderName = folderName,
+                iconCandidates = iconCandidates,
+                entryPoint = entryPoint
+            )
+            }
     
     private fun copyTree(context: Context, src: DocumentFile, dest: File, writeFileCallback: (String) -> (Unit)) {
         if (!dest.exists()) dest.mkdirs()
@@ -322,6 +511,54 @@ object GameImporter {
             }
     }
 
+    /**
+     * Finds the shallowest LÖVE 2D archive.
+     */
+    private fun findLove2DFile(
+        root: File
+    ): File? {
+        return root.walkTopDown()
+            .filter { file ->
+                file.isFile &&
+                    LOVE2D_EXTENSIONS.any {
+                        file.extension.equals(
+                            it,
+                            ignoreCase = true
+                        )
+                    }
+            }
+            .minByOrNull { file ->
+                file
+                    .relativeTo(root)
+                    .invariantSeparatorsPath
+                    .count { c -> c == '/' }
+            }
+    }
+
+    /**
+     * Finds the shallowest Flash SWF.
+     */
+    private fun findFlashFile(
+        root: File
+    ): File? {
+        return root.walkTopDown()
+            .filter { file ->
+                file.isFile &&
+                    FLASH_EXTENSIONS.any {
+                        file.extension.equals(
+                            it,
+                            ignoreCase = true
+                        )
+                    }
+            }
+            .minByOrNull { file ->
+                file
+                    .relativeTo(root)
+                    .invariantSeparatorsPath
+                    .count { c -> c == '/' }
+            }
+    }
+    
     /**
      * Finds the best HTML entry point in a tree.
      *
