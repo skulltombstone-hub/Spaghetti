@@ -24,6 +24,7 @@ import com.google.android.play.core.install.model.UpdateAvailability
 import net.perfectdreams.butterscotch.android.library.GameEntry
 import net.perfectdreams.butterscotch.android.theme.ButterscotchAndroidTheme
 import java.util.UUID
+import net.perfectdreams.butterscotch.android.runtime.GameLaunchResolver
 
 class MainActivity : ComponentActivity() {
 
@@ -78,65 +79,46 @@ class MainActivity : ComponentActivity() {
                 intent.getStringExtra(
                     GameActivity.EXTRA_GAME_ID
                 )
-
+            
             intent.action = null
             intent.removeExtra(GameActivity.EXTRA_GAME_ID)
 
-            val gameId =
-                runCatching {
-                    UUID.fromString(gameIdAsString)
-                }.getOrNull()
+            val gameId = runCatching {
+                UUID.fromString(gameIdAsString)
+            }.getOrNull()
 
-            val entry =
-                gameId?.let {
-                    gameLibrary.findById(it)
-                }
+            val entry = gameId?.let {
+                gameLibrary.findById(it)
+            }
 
             if (entry != null) {
-                when (entry.gameType) {
-
-                    is GameEntry.GameType.GameMakerStudio -> {
-                        startActivity(
-                            Intent(
-                                this,
-                                GameActivity::class.java
-                            ).apply {
-                                putExtra(
-                                    GameActivity.EXTRA_GAME_ID,
-                                    entry.id.toString()
-                                )
-                            }
-                        )
-                    }
-
-                    is GameEntry.GameType.Html -> {
-                        startActivity(
-                            Intent(
-                                this,
-                                HtmlGameActivity::class.java
-                            ).apply {
-                                putExtra(
-                                    HtmlGameActivity.EXTRA_GAME_ID,
-                                    entry.id.toString()
-                                )
-                            }
-                        )
-                    }
+                if (
+                    !GameLaunchResolver.launch(
+                        this,
+                        entry
+                    )
+                ) {
+                    Toast.makeText(
+                        this,
+                        "No runtime is registered for this game yet.",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    
+                    return
                 }
-
+                
                 finish()
                 return
-            }
+            } 
         }
-
+        
         appUpdateManager =
-            AppUpdateManagerFactory.create(
-                this.applicationContext
-            )
-
+        AppUpdateManagerFactory.create(
+            this.applicationContext
+        )
+        
         var updateAvailableClickCallback
-                by mutableStateOf<(() -> Unit)?>(null)
-
+        by mutableStateOf<(() -> Unit)?>(null)
         appUpdateManager.appUpdateInfo
             .addOnSuccessListener { appUpdateInfo ->
 
