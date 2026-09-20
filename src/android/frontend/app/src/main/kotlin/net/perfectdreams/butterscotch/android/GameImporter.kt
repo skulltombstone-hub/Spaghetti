@@ -17,12 +17,15 @@ import java.util.zip.ZipInputStream
 import kotlin.math.max
 
 /**
- * Copies a user-picked folder (via Storage Access Framework tree Uri) into the app's per-game
- * bundle directory and detects which supported game type it contains.
+ * Copies a user-picked folder (via Storage Access Framework tree Uri)
+ * into the app's per-game bundle directory and detects the supported
+ * runtime format.
  *
  * Supported inputs:
  * - GameMaker WAD-based games
  * - HTML-based games / sites
+ * - Adobe Flash SWF games
+ * - LÖVE 2D .love games
  *
  * Why copy and not just hold the tree Uri? `takePersistableUriPermission` is fragile (cleared on
  * reboot in some OEM ROMs, lost if the source folder moves) and `DocumentFile` access is slow.
@@ -49,6 +52,14 @@ object GameImporter {
     private val HTML_ENTRY_FILENAMES = listOf(
         "index.html",
         "index.htm",
+    )
+
+    private val FLASH_EXTENSIONS = setOf(
+        "swf"
+    )
+
+    private val LOVE2D_EXTENSIONS = setOf(
+        "love"
     )
 
     sealed interface Result {
@@ -146,11 +157,23 @@ object GameImporter {
         }
 
         val wadFile = findWadFile(temp)
+        val loveFile = findLove2DFile(temp)
+        val flashFile = findFlashFile(temp)
         val htmlFile = findHtmlEntryPoint(temp)
 
         val sourceRoot = when {
-            wadFile != null -> wadFile.parentFile ?: temp
-            htmlFile != null -> htmlFile.parentFile ?: temp
+            wadFile != null ->
+                wadFile.parentFile ?: temp
+
+            loveFile != null ->
+                loveFile.parentFile ?: temp
+
+            flashFile != null ->
+                flashFile.parentFile ?: temp
+            
+            htmlFile != null ->
+                htmlFile.parentFile ?: temp
+
             else -> {
                 temp.deleteRecursively()
                 library.discardStaging(staged)
@@ -207,15 +230,27 @@ object GameImporter {
         }
 
         val wadFile = findWadFile(temp)
+        val loveFile = findLove2DFile(temp)
+        val flashFile = findFlashFile(temp)
         val htmlFile = findHtmlEntryPoint(temp)
 
         val sourceRoot = when {
-            wadFile != null -> wadFile.parentFile ?: temp
-            htmlFile != null -> htmlFile.parentFile ?: temp
+            wadFile != null ->
+                wadFile.parentFile ?: temp
+
+            loveFile != null ->
+                loveFile.parentFile ?: temp
+
+            flashFile != null ->
+                flashFile.parentFile ?: temp
+
+            htmlFile != null ->
+                htmlFile.parentFile ?: temp
+
             else -> {
                 temp.deleteRecursively()
                 library.discardStaging(staged)
-                return@withContext Result.MissingWad(name)
+                return@withContext Result.MissingWad(fallbackName)
             }
         }
 
@@ -257,71 +292,7 @@ object GameImporter {
      * Shared tail for both import paths: verify the bundle contains a supported entry point,
      * derive metadata, scan icons, and build the [Result.Success].
      */
-    private fun finalizeFromBundle(
-        library: GameLibrary,
-        staged: GameLibrary.StagedGame,
-        bundleRoot: File,
-        folderName: String,
-        additionalIconCandidates: List<IconCandidate> = emptyList(),
-    ): Result {
-        val wadFile = findWadFile(bundleRoot)
-        if (wadFile != null) {
-            if (!wadFile.exists()) {
-                library.discardStaging(staged)
-                return Result.Failure("WAD vanished after copy (this is a bug).")
-            }
-
-            val (suggestedTitle, wadVersion) = ParsedDataWin.parseLight(wadFile.absolutePath)?.use { dw ->
-                val name = (dw.displayName ?: dw.name)?.takeIf { it.isNotBlank() }
-                name to dw.wadVersion
-            } ?: (null to -1)
-
-            val iconCandidates = runCatching { scanIconCandidates(bundleRoot) }
-                .onFailure { Log.w(TAG, "Icon extraction failed for ${staged.id}", it) }
-                .getOrDefault(emptyList()) + additionalIconCandidates
-
-            return Result.Success(
-                staged = staged,
-                gameType = GameEntry.GameType.GameMakerStudio(
-                    wadVersion = wadVersion,
-                    filename = wadFile.name
-                ),
-                suggestedTitle = suggestedTitle ?: folderName,
-                folderName = folderName,
-                iconCandidates = iconCandidates,
-                wadFilename = wadFile.name,
-                wadVersion = wadVersion,
-                entryPoint = null,
-            )
-        }
-
-        val htmlFile = findHtmlEntryPoint(bundleRoot)
-            ?: return Result.Failure("Copied bundle does not contain a supported WAD or HTML entry point.")
-
-        val entryPoint = htmlFile.relativeTo(bundleRoot).invariantSeparatorsPath
-        val htmlTitle = extractHtmlTitle(htmlFile)
-        val iconCandidates = runCatching { scanIconCandidates(bundleRoot) }
-            .onFailure { Log.w(TAG, "Icon extraction failed for ${staged.id}", it) }
-            .getOrDefault(emptyList()) + additionalIconCandidates
-
-        return Result.Success(
-            staged = staged,
-            gameType = GameEntry.GameType.Html(
-                sourceUrl = null,
-                entryPoint = entryPoint
-            ),
-            suggestedTitle = htmlTitle ?: folderName,
-            folderName = folderName,
-            iconCandidates = iconCandidates,
-            wadFilename = null,
-            wadVersion = null,
-            entryPoint = entryPoint,
-        )
-    }
-
-    /**
-     * Recursive DocumentFile → File copy. Mirrors the SAF tree directly into the staging bundle.
-     */
+    
     private fun copyTree(context: Context, src: DocumentFile, dest: File, writeFileCallback: (String) -> (Unit)) {
         if (!dest.exists()) dest.mkdirs()
 
